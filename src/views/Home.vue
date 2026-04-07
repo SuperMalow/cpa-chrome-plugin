@@ -3,7 +3,7 @@
     <DashboardHero
       kicker="今日值守"
       title="运营面板"
-      subtitle="CPA / 任务联控"
+      subtitle="账号 / CPA"
       :actions="heroActions"
       @action="handleAction"
     >
@@ -65,32 +65,13 @@
         </DashboardMetricSection>
       </section>
 
-      <section class="mt-4 rounded-[22px] border border-slate-200 bg-gradient-to-b from-slate-50/90 to-slate-100/70 p-4 dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/72">
-        <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-          <div>
-            <h3 class="text-[24px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">联控链路</h3>
-            <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">本地服务、云端接口与任务状态。</p>
-          </div>
-
-          <DashboardStatusPill :label="linkSummary.label" :tone="linkSummary.tone" />
-        </div>
-
-        <div class="mt-4 grid gap-3 xl:grid-cols-3">
-          <DashboardLinkCard
-            v-for="service in linkCards"
-            :key="service.name"
-            v-bind="service"
-          />
-        </div>
-
-        <DashboardToolbar
-          :tabs="focusTabs"
-          :active-tab="activeTab"
-          :actions="quickActions"
-          @select-tab="handleSelectTab"
-          @action="handleAction"
-        />
-      </section>
+      <DashboardToolbar
+        :tabs="focusTabs"
+        :active-tab="activeTab"
+        :actions="quickActions"
+        @select-tab="handleSelectTab"
+        @action="handleAction"
+      />
 
       <footer class="mt-5 flex flex-col gap-2 border-t border-slate-200/80 pt-4 text-[13px] text-slate-500 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:text-slate-400">
         <span>最近更新：{{ lastUpdatedText }}</span>
@@ -107,7 +88,6 @@ import { ElIcon } from "element-plus";
 import { RefreshRight, WarningFilled } from "@element-plus/icons-vue";
 import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
 import DashboardHero from "@/components/dashboard/DashboardHero.vue";
-import DashboardLinkCard from "@/components/dashboard/DashboardLinkCard.vue";
 import DashboardMetricSection from "@/components/dashboard/DashboardMetricSection.vue";
 import DashboardStatusPill from "@/components/dashboard/DashboardStatusPill.vue";
 import DashboardToolbar from "@/components/dashboard/DashboardToolbar.vue";
@@ -127,8 +107,6 @@ const {
   cpaMetrics,
   dashboardError,
   dataSourceText,
-  linkCards,
-  linkSummary,
   loadingDashboard,
   lastUpdatedText,
   refreshDashboard,

@@ -1,11 +1,6 @@
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
-  Connection,
-  DataAnalysis,
-  Monitor,
-} from "@element-plus/icons-vue";
-import {
   fetchCpaManagementAuthFiles,
   fetchCpaManagementUsage,
 } from "@/api/cpaManagement";
@@ -158,7 +153,6 @@ const useDashboardData = () => {
 
   const dashboardError = computed(() => activeDashboardEntry.value.error);
   const hasConfiguredCpa = computed(() => isConfigReady(activeConfig.value));
-  const hasDashboardData = computed(() => hasEntryData(activeDashboardEntry.value));
 
   const latestRequestHour = computed(() =>
     getLatestHourEntry(activeDashboardEntry.value.usageSummary.requestsByHour),
@@ -349,77 +343,6 @@ const useDashboardData = () => {
     },
   ]);
 
-  const linkCards = computed(() => [
-    {
-      description: dashboardError.value
-        ? "该接入最近一次刷新失败，请检查接口地址、密钥或 CORS。"
-        : "使用当前选中的配置拉取认证文件与用量统计。",
-      endpoint: activeConfig.value?.baseUrl?.trim() || "未配置接口地址",
-      icon: Monitor,
-      metric: activeDashboardEntry.value.usageSummary.totalRequests
-        ? `请求 ${formatNumber(activeDashboardEntry.value.usageSummary.totalRequests)}`
-        : "等待首次同步",
-      name: activeConfigName.value ? `${activeConfigName.value} 管理接口` : "CPA 聚合服务",
-      status: dashboardError.value
-        ? "异常"
-        : hasDashboardData.value
-          ? "在线"
-          : "待同步",
-      tone: dashboardError.value
-        ? "danger"
-        : hasDashboardData.value
-          ? "success"
-          : "neutral",
-    },
-    {
-      description: "认证文件总量、停用文件与不可用文件状态。",
-      endpoint: "/v0/management/auth-files",
-      icon: Connection,
-      metric: activeDashboardEntry.value.authFilesSummary.total
-        ? `文件 ${formatNumber(activeDashboardEntry.value.authFilesSummary.total)}`
-        : "等待同步",
-      name: "Auth Files",
-      status: activeDashboardEntry.value.authFilesSummary.total ? "已同步" : "待同步",
-      tone: activeDashboardEntry.value.authFilesSummary.total ? "accent" : "neutral",
-    },
-    {
-      description: "请求量、失败数与按小时 Token 消耗概览。",
-      endpoint: "/v0/management/usage",
-      icon: DataAnalysis,
-      metric: activeDashboardEntry.value.usageSummary.totalTokens
-        ? `Tokens ${formatCompactNumber(activeDashboardEntry.value.usageSummary.totalTokens)}`
-        : "等待同步",
-      name: "Usage 统计",
-      status: activeDashboardEntry.value.usageSummary.totalRequests ? "已同步" : "待同步",
-      tone: activeDashboardEntry.value.usageSummary.totalRequests ? "accent" : "neutral",
-    },
-  ]);
-
-  const linkSummary = computed(() => {
-    const syncedCount = linkCards.value.filter(
-      (item) => item.status === "在线" || item.status === "已同步",
-    ).length;
-
-    if (dashboardError.value) {
-      return {
-        label: `${formatNumber(syncedCount)}/3 条链路已同步`,
-        tone: "warning",
-      };
-    }
-
-    if (!hasDashboardData.value) {
-      return {
-        label: "等待链路同步",
-        tone: "neutral",
-      };
-    }
-
-    return {
-      label: `${formatNumber(syncedCount)} 条链路在线`,
-      tone: "accent",
-    };
-  });
-
   const lastUpdatedText = computed(() =>
     formatDashboardTimestamp(activeDashboardEntry.value.lastUpdatedAt),
   );
@@ -484,8 +407,6 @@ const useDashboardData = () => {
     dashboardError,
     dataSourceText,
     lastUpdatedText,
-    linkCards,
-    linkSummary,
     loadingDashboard,
     refreshDashboard,
     setActiveConfig,
