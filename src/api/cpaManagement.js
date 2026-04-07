@@ -2,6 +2,7 @@ import axios from "axios";
 
 const MANAGEMENT_CONFIG_PATH = "/v0/management/config";
 const MANAGEMENT_AUTH_FILES_PATH = "/v0/management/auth-files";
+const MANAGEMENT_AUTH_FILES_STATUS_PATH = "/v0/management/auth-files/status";
 const MANAGEMENT_USAGE_PATH = "/v0/management/usage";
 
 const resolveManagementUrl = (baseUrl, path = MANAGEMENT_CONFIG_PATH) => {
@@ -50,13 +51,27 @@ const buildAuthHeaders = ({ authType, apiKey }) => {
   return headers;
 };
 
-const createCpaManagementRequestConfig = (config, path = MANAGEMENT_CONFIG_PATH) => ({
-  url: resolveManagementUrl(config.baseUrl, path),
-  method: "GET",
-  headers: buildAuthHeaders(config),
-  timeout: Math.max(Number(config.timeoutSeconds) || 30, 1) * 1000,
-  withCredentials: false,
-});
+const createCpaManagementRequestConfig = (
+  config,
+  path = MANAGEMENT_CONFIG_PATH,
+  options = {},
+) => {
+  const headers = {
+    ...buildAuthHeaders(config),
+    ...(options.headers || {}),
+  };
+
+  return {
+    url: resolveManagementUrl(config.baseUrl, path),
+    method: options.method || "GET",
+    headers,
+    timeout: Math.max(Number(config.timeoutSeconds) || 30, 1) * 1000,
+    withCredentials: false,
+    ...(Object.prototype.hasOwnProperty.call(options, "data")
+      ? { data: options.data }
+      : {}),
+  };
+};
 
 const testCpaManagementConfig = (config) =>
   axios(createCpaManagementRequestConfig(config));
@@ -67,11 +82,27 @@ const fetchCpaManagementAuthFiles = (config) =>
 const fetchCpaManagementUsage = (config) =>
   axios(createCpaManagementRequestConfig(config, MANAGEMENT_USAGE_PATH));
 
+const patchCpaManagementAuthFileStatus = (config, payload) =>
+  axios(
+    createCpaManagementRequestConfig(
+      config,
+      MANAGEMENT_AUTH_FILES_STATUS_PATH,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: payload,
+      },
+    ),
+  );
+
 export {
   buildAuthHeaders,
   createCpaManagementRequestConfig,
   fetchCpaManagementAuthFiles,
   fetchCpaManagementUsage,
+  patchCpaManagementAuthFileStatus,
   resolveManagementConfigUrl,
   resolveManagementUrl,
   testCpaManagementConfig,

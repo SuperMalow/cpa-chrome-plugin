@@ -48,6 +48,14 @@ const toneMap = {
     toneClass: "border-blue-100 bg-blue-50/88 dark:border-sky-900/60 dark:bg-sky-950/52",
     valueClass: "text-blue-600 dark:text-sky-300",
   },
+  warning: {
+    toneClass: "border-amber-100 bg-amber-50/88 dark:border-amber-900/60 dark:bg-amber-950/52",
+    valueClass: "text-amber-600 dark:text-amber-300",
+  },
+  danger: {
+    toneClass: "border-rose-100 bg-rose-50/88 dark:border-rose-900/60 dark:bg-rose-950/52",
+    valueClass: "text-rose-500 dark:text-rose-300",
+  },
 };
 
 const toneClass = computed(() => toneMap[props.tone]?.toneClass || toneMap.neutral.toneClass);

@@ -147,10 +147,20 @@ const focusTabs = DASHBOARD_FOCUS_TABS;
 const quickActions = DASHBOARD_QUICK_ACTIONS;
 
 const handleSelectTab = (tab) => {
+  if (tab === "账号") {
+    router.push({ name: "accounts" });
+    return;
+  }
+
   activeTab.value = tab;
 };
 
 const handleAction = (action) => {
+  if (action.key === "accounts") {
+    router.push({ name: "accounts" });
+    return;
+  }
+
   if (action.key === "settings") {
     router.push({ name: "settings" });
     return;
