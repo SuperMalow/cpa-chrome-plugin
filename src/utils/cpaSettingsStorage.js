@@ -2,6 +2,15 @@ const STORAGE_KEY = "dashboard:cpa-settings";
 
 const hasChromeStorage = () => Boolean(globalThis.chrome?.storage?.local);
 
+const serializeSettingsPayload = (payload) => {
+  try {
+    return JSON.parse(JSON.stringify(payload));
+  } catch (error) {
+    console.warn("Failed to serialize CPA settings payload", error);
+    return payload;
+  }
+};
+
 export const loadCpaSettings = async () => {
   if (hasChromeStorage()) {
     return new Promise((resolve, reject) => {
@@ -33,9 +42,11 @@ export const loadCpaSettings = async () => {
 };
 
 export const saveCpaSettings = async (configs) => {
+  const serializedPayload = serializeSettingsPayload(configs);
+
   if (hasChromeStorage()) {
     return new Promise((resolve, reject) => {
-      globalThis.chrome.storage.local.set({ [STORAGE_KEY]: configs }, () => {
+      globalThis.chrome.storage.local.set({ [STORAGE_KEY]: serializedPayload }, () => {
         const runtimeError = globalThis.chrome.runtime?.lastError;
 
         if (runtimeError) {
@@ -48,5 +59,5 @@ export const saveCpaSettings = async (configs) => {
     });
   }
 
-  globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(configs));
+  globalThis.localStorage?.setItem(STORAGE_KEY, JSON.stringify(serializedPayload));
 };

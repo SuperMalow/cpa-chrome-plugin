@@ -1,6 +1,7 @@
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
+  deleteCpaManagementAuthFiles,
   fetchCpaManagementAuthFiles,
   patchCpaManagementAuthFileStatus,
 } from "@/api/cpaManagement";
@@ -315,7 +316,7 @@ export const useAccountManagementData = () => {
     }
   };
 
-  const removeAccounts = (ids = []) => {
+  const removeAccounts = async (ids = []) => {
     const targetIds = new Set(ids);
 
     if (!targetIds.size) {
@@ -323,20 +324,50 @@ export const useAccountManagementData = () => {
       return false;
     }
 
-    const targetItems = activeEntry.value.items.filter((item) => targetIds.has(item.id));
+    if (mutatingAccounts.value) {
+      return false;
+    }
+
+    const targetConfig = activeConfig.value;
+    const targetEntry = getAccountEntry(activeConfigId.value);
+
+    if (!isConfigReady(targetConfig)) {
+      ElMessage.warning("当前接入未完成配置，暂时无法删除账号");
+      return false;
+    }
+
+    const targetItems = targetEntry.items.filter((item) => targetIds.has(item.id));
 
     if (!targetItems.length) {
       ElMessage.warning("未找到要删除的账号");
       return false;
     }
 
-    console.log("[account-delete-preview]", {
-      configId: activeConfigId.value,
-      items: targetItems,
-    });
+    const fileNames = targetItems
+      .map((item) => item.fileName)
+      .filter(Boolean);
 
-    ElMessage.success("已记录删除确认，当前仅输出到控制台");
-    return true;
+    if (!fileNames.length) {
+      ElMessage.warning("未找到可删除的账号文件名");
+      return false;
+    }
+
+    mutatingAccounts.value = true;
+
+    try {
+      await deleteCpaManagementAuthFiles(targetConfig, {
+        names: fileNames,
+      });
+
+      ElMessage.success(fileNames.length > 1 ? "已删除所选账号" : "账号已删除");
+      return true;
+    } catch (error) {
+      console.error(error);
+      ElMessage.error(resolveDashboardErrorMessage(error));
+      return false;
+    } finally {
+      mutatingAccounts.value = false;
+    }
   };
 
   const setActiveConfig = (configId) => {

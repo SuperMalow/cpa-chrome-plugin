@@ -173,8 +173,8 @@ const handleRemoveAccounts = async (ids) => {
 
   const title = count > 1 ? "确认删除所选账号" : "确认删除账号";
   const message = count > 1
-    ? `你正在删除 ${count} 个账号。当前仅演示二次确认流程，确认后只会输出到控制台，不会真正删除数据。`
-    : "当前仅演示二次确认流程，确认后只会输出到控制台，不会真正删除数据。";
+    ? `你正在删除 ${count} 个账号。删除后无法恢复，请确认继续。`
+    : "删除后无法恢复，请确认继续。";
 
   try {
     await ElMessageBox.confirm(message, title, {
@@ -187,7 +187,14 @@ const handleRemoveAccounts = async (ids) => {
     return;
   }
 
-  removeAccounts(ids);
+  const handled = await removeAccounts(ids);
+
+  if (!handled) {
+    return;
+  }
+
+  resetSelection();
+  await refreshAccounts();
 };
 
 onMounted(() => {

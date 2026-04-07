@@ -97,7 +97,23 @@ const patchCpaManagementAuthFileStatus = (config, payload) =>
     ),
   );
 
+const deleteCpaManagementAuthFiles = (config, payload) =>
+  axios(
+    createCpaManagementRequestConfig(
+      config,
+      MANAGEMENT_AUTH_FILES_PATH,
+      {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: payload,
+      },
+    ),
+  );
+
 export {
+  deleteCpaManagementAuthFiles,
   buildAuthHeaders,
   createCpaManagementRequestConfig,
   fetchCpaManagementAuthFiles,
