@@ -332,6 +332,67 @@ const useDashboardData = () => {
     },
   ]);
 
+  const popupMetrics = computed(() => {
+    const { currentHour, totals } = serviceHealthData.value;
+    const currentRequest = requestMonitorTimeline.value.at(-1) || { value: 0 };
+    const currentToken = tokenMonitorTimeline.value.at(-1) || { value: 0 };
+    const problemAccounts =
+      activeDashboardEntry.value.authFilesSummary.disabled
+      + activeDashboardEntry.value.authFilesSummary.unavailable;
+    const successRateText = currentHour?.total
+      ? currentHour.successRateText
+      : totals.total > 0
+        ? totals.successRateText
+        : "--";
+    const successRateTone = currentHour?.total
+      ? resolveSuccessRateTone(currentHour.successRate, currentHour.total)
+      : resolveSuccessRateTone(totals.successRate, totals.total);
+    const successRateNote = currentHour?.total
+      ? `成功 ${formatNumber(currentHour.success)} / 失败 ${formatNumber(currentHour.failed)}`
+      : totals.total > 0
+        ? `24 小时成功 ${formatNumber(totals.success)} / 失败 ${formatNumber(totals.failed)}`
+        : "最近暂无请求";
+
+    return [
+      {
+        label: "当前成功率",
+        note: successRateNote,
+        tone: successRateTone,
+        value: successRateText,
+      },
+      {
+        label: "当前小时请求",
+        note: latestRequestHour.value.label,
+        tone: currentRequest.value > 0 ? "accent" : "neutral",
+        value: formatNumber(currentRequest.value),
+      },
+      {
+        label: "当前小时 Tokens",
+        note: latestTokenHour.value.label,
+        tone: currentToken.value > 0 ? "warning" : "neutral",
+        value: formatCompactNumber(currentToken.value),
+      },
+      {
+        label: "24 小时 Tokens",
+        note: "最近 24 小时消耗",
+        tone: last24HourTokens.value > 0 ? "accent" : "neutral",
+        value: formatCompactNumber(last24HourTokens.value),
+      },
+      {
+        label: "问题账号",
+        note: `停用 ${formatNumber(activeDashboardEntry.value.authFilesSummary.disabled)} / 不可用 ${formatNumber(activeDashboardEntry.value.authFilesSummary.unavailable)}`,
+        tone: problemAccounts > 0 ? "danger" : "success",
+        value: formatNumber(problemAccounts),
+      },
+      {
+        label: "活跃账号",
+        note: `总数 ${formatNumber(activeDashboardEntry.value.authFilesSummary.total)}`,
+        tone: "success",
+        value: formatNumber(activeDashboardEntry.value.authFilesSummary.active),
+      },
+    ];
+  });
+
   const cpaMetrics = computed(() => [
     {
       label: "总请求",
@@ -482,7 +543,7 @@ const useDashboardData = () => {
     return `${activeConfigName.value} / ${activeConfig.value.baseUrl.trim()}`;
   });
 
-  const refreshDashboard = async ({ showToast = false } = {}) => {
+  const refreshDashboard = async ({ showToast = false, onlyActive = false } = {}) => {
     await settingsStore.loadSettings();
     syncDashboardEntries(settingsStore.configs);
 
@@ -499,8 +560,11 @@ const useDashboardData = () => {
       activeConfigId.value = resolveDefaultConfigId(settingsStore.configs);
     }
 
+    const targetConfigs = onlyActive
+      ? settingsStore.configs.filter((config) => config.id === activeConfigId.value)
+      : settingsStore.configs;
     const results = await Promise.all(
-      settingsStore.configs.map((config) => refreshConfigDashboard(config)),
+      targetConfigs.map((config) => refreshConfigDashboard(config)),
     );
 
     if (!showToast) {
@@ -529,12 +593,15 @@ const useDashboardData = () => {
   return {
     accountMetrics,
     activeConfigId,
+    activeConfigName,
     configTabs,
     cpaMetrics,
     dashboardError,
     dataSourceText,
+    hasConfiguredCpa,
     lastUpdatedText,
     loadingDashboard,
+    popupMetrics,
     requestMonitorSummary,
     requestMonitorTimeline,
     refreshDashboard,

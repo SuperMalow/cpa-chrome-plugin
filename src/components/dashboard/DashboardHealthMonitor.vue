@@ -79,8 +79,8 @@ const resolveBarClass = (item) => {
   }
 
   return item.isCurrent
-    ? "bg-slate-700 ring-1 ring-slate-500/60"
-    : "bg-slate-700/90";
+    ? "bg-slate-300 ring-1 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500/60"
+    : "bg-slate-300/90 dark:bg-slate-700/90";
 };
 
 const resolveBarAriaLabel = (item) =>

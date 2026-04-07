@@ -1,13 +1,13 @@
 <template>
   <article
-    class="rounded-[22px] border border-slate-800/90 bg-slate-950/96 p-4 shadow-[inset_0_1px_0_rgba(148,163,184,0.08)] dark:border-slate-700 dark:bg-slate-950"
+    class="rounded-[22px] border border-slate-200/90 bg-white/88 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.62),0_10px_30px_rgba(148,163,184,0.12)] dark:border-slate-700 dark:bg-slate-950 dark:shadow-[inset_0_1px_0_rgba(148,163,184,0.08)]"
   >
     <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="min-w-0">
-        <h4 class="text-[13px] font-bold text-slate-100">{{ title }}</h4>
+        <h4 class="text-[13px] font-bold text-slate-800 dark:text-slate-100">{{ title }}</h4>
         <p
           v-if="description"
-          class="mt-1 text-[11px] leading-5 text-slate-400"
+          class="mt-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400"
         >
           {{ description }}
         </p>
@@ -26,7 +26,7 @@
           :key="item.key"
           :aria-label="resolveAriaLabel(item, index)"
           :class="[
-            'flex-1 cursor-pointer transition duration-200 hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-white/25',
+            'flex-1 cursor-pointer transition duration-200 hover:opacity-90 focus:outline-none focus:ring-1 focus:ring-slate-300/80 dark:focus:ring-white/25',
             buttonClass,
             resolveBarClass(item, index),
           ]"
@@ -40,7 +40,7 @@
       </div>
     </div>
 
-    <div class="mt-3 flex items-center justify-between gap-4 text-[10px] font-semibold tracking-[0.14em] text-slate-500">
+    <div class="mt-3 flex items-center justify-between gap-4 text-[10px] font-semibold tracking-[0.14em] text-slate-400 dark:text-slate-500">
       <span class="max-w-[42%] truncate tabular-nums">
         {{ startLabel }}
       </span>

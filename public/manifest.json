@@ -1,0 +1,18 @@
+{
+  "manifest_version": 3,
+  "name": "CPA 面板",
+  "description": "聚合查看 CPA 与账号常用信息的浏览器插件面板。",
+  "version": "0.0.0",
+  "permissions": [
+    "storage",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "CPA 快捷面板"
+  }
+}
