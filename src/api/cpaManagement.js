@@ -1,8 +1,10 @@
 import axios from "axios";
 
 const MANAGEMENT_CONFIG_PATH = "/v0/management/config";
+const MANAGEMENT_AUTH_FILES_PATH = "/v0/management/auth-files";
+const MANAGEMENT_USAGE_PATH = "/v0/management/usage";
 
-const resolveManagementConfigUrl = (baseUrl) => {
+const resolveManagementUrl = (baseUrl, path = MANAGEMENT_CONFIG_PATH) => {
   const normalizedBaseUrl = baseUrl?.trim();
 
   if (!normalizedBaseUrl) {
@@ -10,11 +12,14 @@ const resolveManagementConfigUrl = (baseUrl) => {
   }
 
   try {
-    return new URL(MANAGEMENT_CONFIG_PATH, normalizedBaseUrl).toString();
+    return new URL(path, normalizedBaseUrl).toString();
   } catch {
     throw new Error("CPA 接口地址格式不正确，请填写完整的 http:// 或 https:// 地址");
   }
 };
+
+const resolveManagementConfigUrl = (baseUrl) =>
+  resolveManagementUrl(baseUrl, MANAGEMENT_CONFIG_PATH);
 
 const buildAuthHeaders = ({ authType, apiKey }) => {
   const token = apiKey?.trim();
@@ -45,8 +50,8 @@ const buildAuthHeaders = ({ authType, apiKey }) => {
   return headers;
 };
 
-const createCpaManagementRequestConfig = (config) => ({
-  url: resolveManagementConfigUrl(config.baseUrl),
+const createCpaManagementRequestConfig = (config, path = MANAGEMENT_CONFIG_PATH) => ({
+  url: resolveManagementUrl(config.baseUrl, path),
   method: "GET",
   headers: buildAuthHeaders(config),
   timeout: Math.max(Number(config.timeoutSeconds) || 30, 1) * 1000,
@@ -56,9 +61,18 @@ const createCpaManagementRequestConfig = (config) => ({
 const testCpaManagementConfig = (config) =>
   axios(createCpaManagementRequestConfig(config));
 
+const fetchCpaManagementAuthFiles = (config) =>
+  axios(createCpaManagementRequestConfig(config, MANAGEMENT_AUTH_FILES_PATH));
+
+const fetchCpaManagementUsage = (config) =>
+  axios(createCpaManagementRequestConfig(config, MANAGEMENT_USAGE_PATH));
+
 export {
   buildAuthHeaders,
   createCpaManagementRequestConfig,
+  fetchCpaManagementAuthFiles,
+  fetchCpaManagementUsage,
   resolveManagementConfigUrl,
+  resolveManagementUrl,
   testCpaManagementConfig,
 };

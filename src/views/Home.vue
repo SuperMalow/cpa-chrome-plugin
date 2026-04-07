@@ -39,7 +39,7 @@
 
         <DashboardMetricSection
           title="账号"
-          description="总量、活跃、上传占比。"
+          description="Auth 文件总量与可用状态。"
           :metrics="accountMetrics"
           grid-class="grid-cols-1 sm:grid-cols-2"
         />
@@ -48,18 +48,17 @@
       <section class="mt-4">
         <DashboardMetricSection
           title="CPA"
-          description="文件、失败、流量压力。"
+          description="请求量、失败率与 Token 消耗。"
           :metrics="cpaMetrics"
           grid-class="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
         >
-          <div class="mt-4 rounded-3xl border border-amber-200 bg-gradient-to-b from-amber-50 to-amber-100/80 p-4 dark:border-amber-900/60 dark:from-amber-950/50 dark:to-amber-950/35">
+          <div v-if="dashboardError" class="mt-4 rounded-3xl border border-amber-200 bg-gradient-to-b from-amber-50 to-amber-100/80 p-4 dark:border-amber-900/60 dark:from-amber-950/50 dark:to-amber-950/35">
             <div class="inline-flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300">
               <el-icon><WarningFilled /></el-icon>
-              本次刷新未完整返回
+              最近一次刷新失败
             </div>
             <p class="mt-2 text-[13px] leading-6 text-amber-800 dark:text-amber-200/80">
-              已保留上次数据。Unexpected token '&lt;', '&lt;!doctype' ... is not valid JSON;
-              Unexpected token '&lt;', '&lt;!doctype' ... is not valid JSON
+              {{ dashboardError }}
             </p>
           </div>
         </DashboardMetricSection>
@@ -72,7 +71,7 @@
             <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">本地服务、云端接口与任务状态。</p>
           </div>
 
-          <DashboardStatusPill label="3 条链路在线" tone="accent" />
+          <DashboardStatusPill :label="linkSummary.label" :tone="linkSummary.tone" />
         </div>
 
         <div class="mt-4 grid gap-3 xl:grid-cols-3">
@@ -93,108 +92,58 @@
       </section>
 
       <footer class="mt-5 flex flex-col gap-2 border-t border-slate-200/80 pt-4 text-[13px] text-slate-500 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:text-slate-400">
-        <span>最近更新：2026-04-07 13:52</span>
-        <span>数据源：本地服务 / 云端服务 / 浏览器缓存</span>
+        <span>最近更新：{{ lastUpdatedText }}</span>
+        <span>数据源：{{ dataSourceText }}</span>
       </footer>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElIcon } from "element-plus";
-import {
-  Connection,
-  DataAnalysis,
-  Link,
-  Monitor,
-  RefreshRight,
-  Setting,
-  WarningFilled,
-} from "@element-plus/icons-vue";
+import { RefreshRight, WarningFilled } from "@element-plus/icons-vue";
 import DashboardHero from "@/components/dashboard/DashboardHero.vue";
 import DashboardLinkCard from "@/components/dashboard/DashboardLinkCard.vue";
 import DashboardMetricSection from "@/components/dashboard/DashboardMetricSection.vue";
 import DashboardStatusPill from "@/components/dashboard/DashboardStatusPill.vue";
 import DashboardToolbar from "@/components/dashboard/DashboardToolbar.vue";
 import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
+import {
+  DASHBOARD_FOCUS_TABS,
+  DASHBOARD_QUICK_ACTIONS,
+  DASHBOARD_REGISTRATION_METRICS,
+} from "@/constants/dashboard";
+import { useDashboardData } from "@/composables/useDashboardData";
 
 const router = useRouter();
 const activeTab = ref("CPA 任务");
+const {
+  accountMetrics,
+  cpaMetrics,
+  dashboardError,
+  dataSourceText,
+  linkCards,
+  linkSummary,
+  loadingDashboard,
+  lastUpdatedText,
+  refreshDashboard,
+  statusBadges,
+} = useDashboardData();
 
-const heroActions = [
-  { key: "refresh", label: "刷新", icon: RefreshRight, variant: "ghost" },
-];
-
-const statusBadges = [
-  { label: "状态已同步", tone: "neutral" },
-  { label: "CPA 已连通", tone: "success" },
-  { label: "注册 不可达", tone: "danger" },
-];
-
-const registrationMetrics = [
-  { label: "注册", value: "0", note: "目标 20", tone: "neutral" },
-  { label: "成功", value: "0", note: "成功率待拉起", tone: "success" },
-  { label: "失败", value: "0", note: "暂无失败波峰", tone: "danger" },
-  { label: "成功率", value: "0.0%", note: "与昨日持平", tone: "accent" },
-];
-
-const accountMetrics = [
-  { label: "总账号数", value: "0", note: "待接入明细池", tone: "neutral" },
-  { label: "活跃账号", value: "0", note: "活跃占比 0.0%", tone: "success" },
-  { label: "已上传 CPA", value: "0", note: "已上传占比 0.0%", tone: "accent" },
-  { label: "有 Access Token", value: "0", note: "未上传 0", tone: "neutral" },
-];
-
-const cpaMetrics = [
-  { label: "认证文件", value: "968", note: "较昨日 +34", tone: "neutral" },
-  { label: "问题文件", value: "57", note: "需重点处理", tone: "warning" },
-  { label: "请求", value: "87", note: "最近 10 分钟", tone: "accent" },
-  { label: "失败", value: "7", note: "失败率 8.0%", tone: "danger" },
-  { label: "总 Tokens", value: "6.6M", note: "按天累计", tone: "neutral" },
-  { label: "RPM", value: "0", note: "当前分钟", tone: "accent" },
-  { label: "TPM", value: "3,629", note: "当前分钟", tone: "accent" },
-];
-
-const linkCards = [
+const heroActions = computed(() => [
   {
-    name: "CPA 聚合服务",
-    description: "负责文件扫描、聚合统计与回传状态同步。",
-    endpoint: "localhost:9527",
-    metric: "响应 243ms",
-    status: "在线",
-    tone: "success",
-    icon: Monitor,
+    key: "refresh",
+    label: loadingDashboard.value ? "刷新中..." : "刷新",
+    icon: RefreshRight,
+    variant: "ghost",
   },
-  {
-    name: "注册机云端接口",
-    description: "负责任务队列、账号回收与异常回执。",
-    endpoint: "api.register-center",
-    metric: "失败 2 次",
-    status: "波动",
-    tone: "warning",
-    icon: Connection,
-  },
-  {
-    name: "任务看板明细",
-    description: "面向人工巡检，展示链路详情与最近一次异常。",
-    endpoint: "dashboard/detail",
-    metric: "缓存 5 分钟",
-    status: "已缓存",
-    tone: "neutral",
-    icon: DataAnalysis,
-  },
-];
+]);
 
-const focusTabs = ["CPA 任务", "账号明细", "注册机联控"];
-
-const quickActions = [
-  { label: "前往 CPA", icon: Link },
-  { label: "前往注册机", icon: Connection },
-  { label: "详细面板", icon: DataAnalysis },
-  { key: "settings", label: "设置", icon: Setting },
-];
+const registrationMetrics = DASHBOARD_REGISTRATION_METRICS;
+const focusTabs = DASHBOARD_FOCUS_TABS;
+const quickActions = DASHBOARD_QUICK_ACTIONS;
 
 const handleSelectTab = (tab) => {
   activeTab.value = tab;
@@ -206,6 +155,15 @@ const handleAction = (action) => {
     return;
   }
 
+  if (action.key === "refresh") {
+    refreshDashboard({ showToast: true });
+    return;
+  }
+
   console.log("dashboard action =>", action.label);
 };
+
+onMounted(() => {
+  refreshDashboard();
+});
 </script>
