@@ -32,12 +32,20 @@
     </section>
 
     <main class="mx-auto w-full max-w-[1180px] space-y-4">
-      <section class="grid gap-4 xl:grid-cols-3">
-        <SettingsSummaryCard label="CPA 接入数" :value="String(settingsStore.totalCount)"
-          :note="`${settingsStore.enabledCount} 个已启用`" tone="neutral" />
-        <SettingsSummaryCard label="已启用" :value="String(settingsStore.enabledCount)" note="建议保留一个默认可用接入"
-          tone="success" />
-        <SettingsSummaryCard label="鉴权覆盖" :value="String(activeAuthCount)" :note="authSummaryText" tone="accent" />
+      <section class="flex flex-col gap-4 md:flex-row">
+        <div class="min-w-0 flex-1">
+          <SettingsSummaryCard label="CPA 接入数" :value="String(settingsStore.totalCount)"
+            :note="`${settingsStore.enabledCount} 个已启用`" tone="neutral" />
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <SettingsSummaryCard label="已启用" :value="String(settingsStore.enabledCount)" note="建议保留一个默认可用接入"
+            tone="success" />
+        </div>
+
+        <div class="min-w-0 flex-1">
+          <SettingsSummaryCard label="鉴权覆盖" :value="String(activeAuthCount)" :note="authSummaryText" tone="accent" />
+        </div>
       </section>
 
       <section

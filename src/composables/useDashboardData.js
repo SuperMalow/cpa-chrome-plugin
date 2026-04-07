@@ -188,6 +188,12 @@ const useDashboardData = () => {
   const tokenMonitorTimeline = computed(() =>
     buildHourlyMetricTimeline(activeDashboardEntry.value.usageSummary.tokensByHour),
   );
+  const last24HourTokens = computed(() =>
+    tokenMonitorTimeline.value.reduce(
+      (total, item) => total + (Number(item?.value) || 0),
+      0,
+    ),
+  );
   const serviceHealthData = computed(() =>
     buildServiceHealthTimeline(activeDashboardEntry.value.usageSummary.requestDetails),
   );
@@ -353,9 +359,15 @@ const useDashboardData = () => {
     },
     {
       label: "总 Tokens",
-      note: `今日累计 ${formatCompactNumber(activeDashboardEntry.value.usageSummary.todayTokens)}`,
+      note: `累计 ${formatCompactNumber(activeDashboardEntry.value.usageSummary.totalTokens)}`,
       tone: "accent",
       value: formatCompactNumber(activeDashboardEntry.value.usageSummary.totalTokens),
+    },
+    {
+      label: "24 小时 Tokens",
+      note: "最近 24 小时消耗",
+      tone: "warning",
+      value: formatCompactNumber(last24HourTokens.value),
     },
     {
       label: "模型数",

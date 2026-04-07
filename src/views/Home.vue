@@ -113,7 +113,7 @@ import {
 import { useDashboardData } from "@/composables/useDashboardData";
 
 const router = useRouter();
-const activeTab = ref("CPA 任务");
+const activeTab = ref("CPA面板");
 const {
   accountMetrics,
   activeConfigId,
