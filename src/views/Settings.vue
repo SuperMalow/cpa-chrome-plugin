@@ -50,6 +50,38 @@
 
       <section
         class="rounded-[28px] border border-slate-200/90 bg-white/62 p-4 shadow-[0_24px_64px_rgba(134,154,192,0.16)] backdrop-blur-xl md:p-5 dark:border-slate-800 dark:bg-slate-900/54 dark:shadow-[0_24px_64px_rgba(2,6,23,0.34)]">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">
+              面板链接设置
+            </h2>
+            <p class="mt-1 text-[13px] leading-6 text-slate-500 dark:text-slate-400">
+              维护注册机面板的跳转地址，后续可用于首页快捷入口直接打开对应面板。
+            </p>
+          </div>
+
+          <button
+            class="inline-flex h-9 cursor-pointer items-center justify-center rounded-2xl border border-slate-200 bg-white/85 px-4 text-[13px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_24px_rgba(112,136,181,0.12)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-900/86 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
+            type="button" :disabled="settingsStore.saving" @click="handleSavePanelLinks">
+            <span class="text-sm">{{ settingsStore.saving ? "保存中..." : "保存链接" }}</span>
+          </button>
+        </div>
+
+        <div class="mt-5 flex flex-col gap-2 text-xs">
+          <label class="space-y-2">
+            <span class="text-xs font-bold text-slate-700 dark:text-slate-200">注册机面板链接</span>
+            <div
+              class="flex min-h-10 items-center gap-2 rounded-2xl border border-white/65 bg-white/72 px-3.5 shadow-sm transition focus-within:border-blue-300 focus-within:bg-white dark:border-slate-700/70 dark:bg-slate-950/46 dark:focus-within:border-sky-400 dark:focus-within:bg-slate-950/66">
+              <input :value="settingsStore.panelLinks.registerPanelUrl"
+                class="w-full bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400 dark:text-slate-100 dark:placeholder:text-slate-500"
+                placeholder="https://example.com/register-panel" @input="handlePanelLinkUpdate" />
+            </div>
+          </label>
+        </div>
+      </section>
+
+      <section
+        class="rounded-[28px] border border-slate-200/90 bg-white/62 p-4 shadow-[0_24px_64px_rgba(134,154,192,0.16)] backdrop-blur-xl md:p-5 dark:border-slate-800 dark:bg-slate-900/54 dark:shadow-[0_24px_64px_rgba(2,6,23,0.34)]">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div class="min-w-0 flex-1">
             <h2 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">CPA
@@ -201,6 +233,12 @@ const handleUpdate = ({ id, patch }) => {
   settingsStore.updateConfig(id, patch);
 };
 
+const handlePanelLinkUpdate = (event) => {
+  settingsStore.updatePanelLinks({
+    registerPanelUrl: event.target.value,
+  });
+};
+
 const handleAddConfig = () => {
   const created = settingsStore.addConfig();
 
@@ -244,6 +282,16 @@ const handleSave = async () => {
   try {
     await settingsStore.saveSettings();
     ElMessage.success("CPA 设置已保存");
+  } catch (error) {
+    console.error(error);
+    ElMessage.error("保存失败，请稍后重试");
+  }
+};
+
+const handleSavePanelLinks = async () => {
+  try {
+    await settingsStore.saveSettings();
+    ElMessage.success("面板链接已保存");
   } catch (error) {
     console.error(error);
     ElMessage.error("保存失败，请稍后重试");

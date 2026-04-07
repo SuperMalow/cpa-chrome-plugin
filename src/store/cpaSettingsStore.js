@@ -8,6 +8,10 @@ import {
   saveCpaSettings,
 } from "@/utils/cpaSettingsStorage";
 
+const createDefaultPanelLinks = () => ({
+  registerPanelUrl: "",
+});
+
 const normalizeConfig = (config, index) => ({
   ...createDefaultCpaConfig(index + 1),
   ...config,
@@ -16,9 +20,16 @@ const normalizeConfig = (config, index) => ({
   enabled: config?.enabled ?? true,
 });
 
+const normalizePanelLinks = (panelLinks) => ({
+  ...createDefaultPanelLinks(),
+  ...panelLinks,
+  registerPanelUrl: String(panelLinks?.registerPanelUrl || ""),
+});
+
 export const useCpaSettingsStore = defineStore("cpaSettings", {
   state: () => ({
     configs: [],
+    panelLinks: createDefaultPanelLinks(),
     loaded: false,
     dirty: false,
     saving: false,
@@ -46,12 +57,18 @@ export const useCpaSettingsStore = defineStore("cpaSettings", {
         return;
       }
 
-      const savedConfigs = await loadCpaSettings();
-      const normalized = Array.isArray(savedConfigs)
-        ? savedConfigs.map((config, index) => normalizeConfig(config, index))
+      const savedSettings = await loadCpaSettings();
+      const rawConfigs = Array.isArray(savedSettings)
+        ? savedSettings
+        : savedSettings?.configs;
+      const normalized = Array.isArray(rawConfigs)
+        ? rawConfigs.map((config, index) => normalizeConfig(config, index))
         : [];
 
       this.configs = normalized.length ? normalized : [createDefaultCpaConfig(1)];
+      this.panelLinks = normalizePanelLinks(
+        Array.isArray(savedSettings) ? null : savedSettings?.panelLinks,
+      );
       this.loaded = true;
       this.dirty = false;
     },
@@ -98,11 +115,22 @@ export const useCpaSettingsStore = defineStore("cpaSettings", {
       this.dirty = true;
     },
 
+    updatePanelLinks(patch) {
+      Object.assign(this.panelLinks, normalizePanelLinks({
+        ...this.panelLinks,
+        ...patch,
+      }));
+      this.dirty = true;
+    },
+
     async saveSettings() {
       this.saving = true;
 
       try {
-        await saveCpaSettings(this.configs);
+        await saveCpaSettings({
+          configs: this.configs,
+          panelLinks: this.panelLinks,
+        });
         this.dirty = false;
         this.lastSavedAt = new Date().toISOString();
       } finally {

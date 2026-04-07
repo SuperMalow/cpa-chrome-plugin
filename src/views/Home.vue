@@ -96,7 +96,7 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import { ElIcon } from "element-plus";
+import { ElIcon, ElMessage } from "element-plus";
 import { RefreshRight, WarningFilled } from "@element-plus/icons-vue";
 import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
 import DashboardHealthMonitor from "@/components/dashboard/DashboardHealthMonitor.vue";
@@ -111,8 +111,10 @@ import {
   DASHBOARD_QUICK_ACTIONS,
 } from "@/constants/dashboard";
 import { useDashboardData } from "@/composables/useDashboardData";
+import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
 
 const router = useRouter();
+const settingsStore = useCpaSettingsStore();
 const activeTab = ref("CPA面板");
 const {
   accountMetrics,
@@ -145,6 +147,36 @@ const heroActions = computed(() => [
 
 const focusTabs = DASHBOARD_FOCUS_TABS;
 const quickActions = DASHBOARD_QUICK_ACTIONS;
+const activeConfig = computed(
+  () => settingsStore.configs.find((item) => item.id === activeConfigId.value) || null,
+);
+
+const resolveCpaPanelUrl = (rawUrl) => {
+  const normalizedUrl = rawUrl?.trim();
+
+  if (!normalizedUrl) {
+    return "";
+  }
+
+  const baseUrl = normalizedUrl.endsWith("/") ? normalizedUrl : `${normalizedUrl}/`;
+  return new URL("management.html", baseUrl).toString();
+};
+
+const openExternalLink = (rawUrl, label) => {
+  const normalizedUrl = rawUrl?.trim();
+
+  if (!normalizedUrl) {
+    ElMessage.warning(`请先在设置页填写${label}`);
+    return;
+  }
+
+  try {
+    const targetUrl = new URL(normalizedUrl).toString();
+    globalThis.open?.(targetUrl, "_blank", "noopener,noreferrer");
+  } catch {
+    ElMessage.warning(`${label}格式不正确，请先在设置页检查`);
+  }
+};
 
 const handleSelectTab = (tab) => {
   if (tab === "账号") {
@@ -155,7 +187,7 @@ const handleSelectTab = (tab) => {
   activeTab.value = tab;
 };
 
-const handleAction = (action) => {
+const handleAction = async (action) => {
   if (action.key === "accounts") {
     router.push({ name: "accounts" });
     return;
@@ -168,6 +200,38 @@ const handleAction = (action) => {
 
   if (action.key === "refresh") {
     refreshDashboard({ showToast: true });
+    return;
+  }
+
+  if (!settingsStore.loaded) {
+    try {
+      await settingsStore.loadSettings();
+    } catch (error) {
+      console.error(error);
+      ElMessage.error("读取设置失败，请稍后重试");
+      return;
+    }
+  }
+
+  if (action.key === "open-cpa") {
+    try {
+      const panelUrl = resolveCpaPanelUrl(activeConfig.value?.baseUrl);
+
+      if (!panelUrl) {
+        ElMessage.warning("请先在设置页填写 CPA 链接");
+        return;
+      }
+
+      globalThis.open?.(panelUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      ElMessage.warning("CPA 链接格式不正确，请先在设置页检查");
+    }
+
+    return;
+  }
+
+  if (action.key === "open-register") {
+    openExternalLink(settingsStore.panelLinks.registerPanelUrl, "注册机面板链接");
     return;
   }
 
