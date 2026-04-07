@@ -57,15 +57,17 @@ export const useCpaSettingsStore = defineStore("cpaSettings", {
     },
 
     addConfig() {
-      this.configs.push(createDefaultCpaConfig(this.configs.length + 1));
+      const created = createDefaultCpaConfig(this.configs.length + 1);
+      this.configs.push(created);
       this.dirty = true;
+      return created;
     },
 
     duplicateConfig(id) {
       const sourceIndex = this.configs.findIndex((item) => item.id === id);
 
       if (sourceIndex === -1) {
-        return;
+        return null;
       }
 
       const source = this.configs[sourceIndex];
@@ -77,6 +79,7 @@ export const useCpaSettingsStore = defineStore("cpaSettings", {
 
       this.configs.splice(sourceIndex + 1, 0, duplicate);
       this.dirty = true;
+      return duplicate;
     },
 
     removeConfig(id) {

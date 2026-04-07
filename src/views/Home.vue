@@ -125,7 +125,6 @@ const activeTab = ref("CPA 任务");
 
 const heroActions = [
   { key: "refresh", label: "刷新", icon: RefreshRight, variant: "ghost" },
-  { key: "settings", label: "设置", icon: Setting, variant: "solid" },
 ];
 
 const statusBadges = [
@@ -194,6 +193,7 @@ const quickActions = [
   { label: "前往 CPA", icon: Link },
   { label: "前往注册机", icon: Connection },
   { label: "详细面板", icon: DataAnalysis },
+  { key: "settings", label: "设置", icon: Setting },
 ];
 
 const handleSelectTab = (tab) => {
