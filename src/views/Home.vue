@@ -3,7 +3,7 @@
     <DashboardHero
       kicker="今日值守"
       title="运营面板"
-      subtitle="CPA / 注册 / 任务联控"
+      subtitle="CPA / 任务联控"
       :actions="heroActions"
       @action="handleAction"
     >
@@ -16,7 +16,7 @@
       <section class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">今日总览</h2>
-          <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">注册、账号、CPA 一屏看完。</p>
+          <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">账号、CPA 一屏看完。</p>
         </div>
 
         <div class="flex flex-wrap gap-2.5 lg:justify-end">
@@ -29,14 +29,7 @@
         </div>
       </section>
 
-      <section class="grid gap-4 xl:grid-cols-2">
-        <DashboardMetricSection
-          title="注册"
-          description="成功率与失败波动。"
-          :metrics="registrationMetrics"
-          grid-class="grid-cols-1 sm:grid-cols-2"
-        />
-
+      <section>
         <DashboardMetricSection
           title="账号"
           description="Auth 文件总量与可用状态。"
@@ -113,7 +106,6 @@ import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
 import {
   DASHBOARD_FOCUS_TABS,
   DASHBOARD_QUICK_ACTIONS,
-  DASHBOARD_REGISTRATION_METRICS,
 } from "@/constants/dashboard";
 import { useDashboardData } from "@/composables/useDashboardData";
 
@@ -141,7 +133,6 @@ const heroActions = computed(() => [
   },
 ]);
 
-const registrationMetrics = DASHBOARD_REGISTRATION_METRICS;
 const focusTabs = DASHBOARD_FOCUS_TABS;
 const quickActions = DASHBOARD_QUICK_ACTIONS;
 
