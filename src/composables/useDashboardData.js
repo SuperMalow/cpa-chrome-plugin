@@ -6,6 +6,8 @@ import {
 } from "@/api/cpaManagement";
 import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
 import {
+  buildHourlyMetricTimeline,
+  buildServiceHealthTimeline,
   createEmptyAuthFilesSummary,
   createEmptyUsageSummary,
   formatCompactNumber,
@@ -45,6 +47,26 @@ const resolveDefaultConfigId = (configs = []) => {
     || null;
 
   return preferredConfig?.id || "";
+};
+
+const resolveSuccessRateTone = (successRate, total) => {
+  if (!total) {
+    return "neutral";
+  }
+
+  if (successRate >= 0.99) {
+    return "success";
+  }
+
+  if (successRate >= 0.95) {
+    return "accent";
+  }
+
+  if (successRate >= 0.85) {
+    return "warning";
+  }
+
+  return "danger";
 };
 
 const useDashboardData = () => {
@@ -159,6 +181,18 @@ const useDashboardData = () => {
   );
   const latestTokenHour = computed(() =>
     getLatestHourEntry(activeDashboardEntry.value.usageSummary.tokensByHour),
+  );
+  const requestMonitorTimeline = computed(() =>
+    buildHourlyMetricTimeline(activeDashboardEntry.value.usageSummary.requestsByHour),
+  );
+  const tokenMonitorTimeline = computed(() =>
+    buildHourlyMetricTimeline(activeDashboardEntry.value.usageSummary.tokensByHour),
+  );
+  const serviceHealthData = computed(() =>
+    buildServiceHealthTimeline(activeDashboardEntry.value.usageSummary.requestDetails),
+  );
+  const serviceHealthTimeline = computed(() =>
+    serviceHealthData.value.timeline,
   );
 
   const refreshConfigDashboard = async (config) => {
@@ -343,6 +377,87 @@ const useDashboardData = () => {
     },
   ]);
 
+  const serviceHealthSummary = computed(() => {
+    if (!hasConfiguredCpa.value) {
+      return {
+        label: "待配置",
+        note: "补全接口地址和密钥后，这里会展示最近 24 小时每小时成功率。",
+        tone: "warning",
+      };
+    }
+
+    if (dashboardError.value && !activeDashboardEntry.value.loaded) {
+      return {
+        label: "同步异常",
+        note: "最近一次读取失败，当前还没有可展示的 24 小时数据。",
+        tone: "danger",
+      };
+    }
+
+    const { currentHour, latestActiveHour, totals } = serviceHealthData.value;
+    const activeHours = serviceHealthTimeline.value.filter((item) => item.total > 0).length;
+
+    if (dashboardError.value) {
+      return {
+        label: "同步异常",
+        note: "最近一次读取失败，以下保留的是当前配置最近一次成功同步的成功率数据。",
+        tone: "danger",
+      };
+    }
+
+    if (!activeDashboardEntry.value.loaded && activeHours === 0) {
+      return {
+        label: "等待同步",
+        note: "完成刷新后，这里会展示最近 24 小时每小时成功率。",
+        tone: "neutral",
+      };
+    }
+
+    if (!totals.total) {
+      return {
+        label: "当前成功率 --",
+        note: "最近 24 小时没有可用的模型调用明细。",
+        tone: "neutral",
+      };
+    }
+
+    if (currentHour?.total) {
+      return {
+        label: `当前成功率 ${currentHour.successRateText}`,
+        note: `24 小时累计成功率 ${totals.successRateText}，当前小时成功 ${formatNumber(currentHour.success)} 次，失败 ${formatNumber(currentHour.failed)} 次。`,
+        tone: resolveSuccessRateTone(currentHour.successRate, currentHour.total),
+      };
+    }
+
+    return {
+      label: "当前成功率 --",
+      note: latestActiveHour
+        ? `当前小时暂无请求，最近活跃小时 ${latestActiveHour.hour}:00 成功率 ${latestActiveHour.successRateText}，24 小时累计成功率 ${totals.successRateText}。`
+        : `当前小时暂无请求，24 小时累计成功率 ${totals.successRateText}。`,
+      tone: resolveSuccessRateTone(totals.successRate, totals.total),
+    };
+  });
+
+  const requestMonitorSummary = computed(() => {
+    const currentHour = requestMonitorTimeline.value.at(-1) || { value: 0 };
+
+    return {
+      label: `当前 ${formatNumber(currentHour.value)}`,
+      note: `今日总请求 ${formatNumber(activeDashboardEntry.value.usageSummary.todayRequests)} 次。`,
+      tone: currentHour.value > 0 ? "accent" : "neutral",
+    };
+  });
+
+  const tokenMonitorSummary = computed(() => {
+    const currentHour = tokenMonitorTimeline.value.at(-1) || { value: 0 };
+
+    return {
+      label: `当前 ${formatCompactNumber(currentHour.value)}`,
+      note: `今日总 Token 消耗 ${formatCompactNumber(activeDashboardEntry.value.usageSummary.todayTokens)}。`,
+      tone: currentHour.value > 0 ? "warning" : "neutral",
+    };
+  });
+
   const lastUpdatedText = computed(() =>
     formatDashboardTimestamp(activeDashboardEntry.value.lastUpdatedAt),
   );
@@ -408,9 +523,15 @@ const useDashboardData = () => {
     dataSourceText,
     lastUpdatedText,
     loadingDashboard,
+    requestMonitorSummary,
+    requestMonitorTimeline,
     refreshDashboard,
     setActiveConfig,
+    serviceHealthSummary,
+    serviceHealthTimeline,
     statusBadges,
+    tokenMonitorSummary,
+    tokenMonitorTimeline,
   };
 };
 

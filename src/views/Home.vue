@@ -65,6 +65,18 @@
         </DashboardMetricSection>
       </section>
 
+      <DashboardHealthMonitor
+        :items="serviceHealthTimeline"
+        :summary="serviceHealthSummary"
+      />
+
+      <DashboardIconMonitor
+        :request-items="requestMonitorTimeline"
+        :request-summary="requestMonitorSummary"
+        :token-items="tokenMonitorTimeline"
+        :token-summary="tokenMonitorSummary"
+      />
+
       <DashboardToolbar
         :tabs="focusTabs"
         :active-tab="activeTab"
@@ -87,7 +99,9 @@ import { useRouter } from "vue-router";
 import { ElIcon } from "element-plus";
 import { RefreshRight, WarningFilled } from "@element-plus/icons-vue";
 import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
+import DashboardHealthMonitor from "@/components/dashboard/DashboardHealthMonitor.vue";
 import DashboardHero from "@/components/dashboard/DashboardHero.vue";
+import DashboardIconMonitor from "@/components/dashboard/DashboardIconMonitor.vue";
 import DashboardMetricSection from "@/components/dashboard/DashboardMetricSection.vue";
 import DashboardStatusPill from "@/components/dashboard/DashboardStatusPill.vue";
 import DashboardToolbar from "@/components/dashboard/DashboardToolbar.vue";
@@ -109,9 +123,15 @@ const {
   dataSourceText,
   loadingDashboard,
   lastUpdatedText,
+  requestMonitorSummary,
+  requestMonitorTimeline,
   refreshDashboard,
   setActiveConfig,
+  serviceHealthSummary,
+  serviceHealthTimeline,
   statusBadges,
+  tokenMonitorSummary,
+  tokenMonitorTimeline,
 } = useDashboardData();
 
 const heroActions = computed(() => [
