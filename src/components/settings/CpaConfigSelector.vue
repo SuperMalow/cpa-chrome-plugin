@@ -7,7 +7,9 @@
   ]" type="button">
     <span :class="[
       'h-1.5 w-1.5 shrink-0 rounded-full',
-      enabled ? 'bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.16)]' : 'bg-slate-300 dark:bg-slate-500',
+      indicatorClass || (enabled
+        ? 'bg-emerald-400 shadow-[0_0_0_4px_rgba(52,211,153,0.16)]'
+        : 'bg-slate-300 dark:bg-slate-500'),
     ]"></span>
     <span class="truncate text-xs">{{ name }}</span>
   </button>
@@ -26,6 +28,10 @@ defineProps({
   enabled: {
     type: Boolean,
     default: true,
+  },
+  indicatorClass: {
+    type: String,
+    default: "",
   },
 });
 </script>

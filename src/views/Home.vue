@@ -29,6 +29,14 @@
         </div>
       </section>
 
+      <DashboardConfigTabs
+        v-if="configTabs.length"
+        class="mb-4"
+        :items="configTabs"
+        :active-id="activeConfigId"
+        @change="setActiveConfig"
+      />
+
       <section>
         <DashboardMetricSection
           title="账号"
@@ -97,6 +105,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ElIcon } from "element-plus";
 import { RefreshRight, WarningFilled } from "@element-plus/icons-vue";
+import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
 import DashboardHero from "@/components/dashboard/DashboardHero.vue";
 import DashboardLinkCard from "@/components/dashboard/DashboardLinkCard.vue";
 import DashboardMetricSection from "@/components/dashboard/DashboardMetricSection.vue";
@@ -113,6 +122,8 @@ const router = useRouter();
 const activeTab = ref("CPA 任务");
 const {
   accountMetrics,
+  activeConfigId,
+  configTabs,
   cpaMetrics,
   dashboardError,
   dataSourceText,
@@ -121,6 +132,7 @@ const {
   loadingDashboard,
   lastUpdatedText,
   refreshDashboard,
+  setActiveConfig,
   statusBadges,
 } = useDashboardData();
 

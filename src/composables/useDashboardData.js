@@ -1,4 +1,4 @@
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
   Connection,
@@ -23,72 +23,236 @@ import {
   resolveDashboardErrorMessage,
 } from "@/utils/dashboardData";
 
+const createDashboardEntry = () => ({
+  authFilesSummary: createEmptyAuthFilesSummary(),
+  error: "",
+  lastUpdatedAt: "",
+  loaded: false,
+  loading: false,
+  usageSummary: createEmptyUsageSummary(),
+});
+
+const isConfigReady = (config) =>
+  Boolean(config?.baseUrl?.trim() && config?.apiKey?.trim());
+
+const hasEntryData = (entry) =>
+  entry?.authFilesSummary?.total > 0 || entry?.usageSummary?.totalRequests > 0;
+
+const resolveConfigLabel = (config, index) =>
+  config?.name?.trim() || `CPA 接入 ${String(index + 1).padStart(2, "0")}`;
+
+const resolveDefaultConfigId = (configs = []) => {
+  const preferredConfig =
+    configs.find((config) => config.enabled && isConfigReady(config))
+    || configs.find((config) => isConfigReady(config))
+    || configs.find((config) => config.enabled)
+    || configs[0]
+    || null;
+
+  return preferredConfig?.id || "";
+};
+
 const useDashboardData = () => {
   const settingsStore = useCpaSettingsStore();
-  const loadingDashboard = ref(false);
-  const dashboardError = ref("");
-  const lastUpdatedAt = ref("");
-  const authFilesSummary = ref(createEmptyAuthFilesSummary());
-  const usageSummary = ref(createEmptyUsageSummary());
+  const activeConfigId = ref("");
+  const dashboardEntries = ref({});
 
-  const resetDashboardData = () => {
-    authFilesSummary.value = createEmptyAuthFilesSummary();
-    usageSummary.value = createEmptyUsageSummary();
-    lastUpdatedAt.value = "";
+  const syncDashboardEntries = (configs = []) => {
+    const nextEntries = {};
+
+    configs.forEach((config) => {
+      nextEntries[config.id] = dashboardEntries.value[config.id] || createDashboardEntry();
+    });
+
+    dashboardEntries.value = nextEntries;
   };
 
-  const currentConfig = computed(
-    () =>
-      settingsStore.configs.find((item) => item.enabled)
-      || settingsStore.configs[0]
-      || null,
+  const getDashboardEntry = (configId) => {
+    if (!configId) {
+      return createDashboardEntry();
+    }
+
+    if (!dashboardEntries.value[configId]) {
+      dashboardEntries.value[configId] = createDashboardEntry();
+    }
+
+    return dashboardEntries.value[configId];
+  };
+
+  const resetDashboardEntry = (configId) => {
+    const entry = getDashboardEntry(configId);
+
+    entry.authFilesSummary = createEmptyAuthFilesSummary();
+    entry.error = "";
+    entry.lastUpdatedAt = "";
+    entry.loaded = false;
+    entry.loading = false;
+    entry.usageSummary = createEmptyUsageSummary();
+  };
+
+  watch(
+    () => settingsStore.configs.map((config) => config.id),
+    (configIds) => {
+      syncDashboardEntries(settingsStore.configs);
+
+      if (!configIds.length) {
+        activeConfigId.value = "";
+        return;
+      }
+
+      if (!configIds.includes(activeConfigId.value)) {
+        activeConfigId.value = resolveDefaultConfigId(settingsStore.configs);
+      }
+    },
+    { immediate: true },
+  );
+
+  const configTabs = computed(() =>
+    settingsStore.configs.map((config, index) => {
+      const entry = dashboardEntries.value[config.id] || createDashboardEntry();
+      const ready = isConfigReady(config);
+      const hasData = hasEntryData(entry);
+
+      let status = "待同步";
+      let tone = "neutral";
+
+      if (entry.loading) {
+        status = "刷新中";
+        tone = "accent";
+      } else if (!ready) {
+        status = "待配置";
+        tone = "warning";
+      } else if (entry.error) {
+        status = "异常";
+        tone = "danger";
+      } else if (hasData) {
+        status = "已同步";
+        tone = "success";
+      }
+
+      return {
+        enabled: config.enabled,
+        id: config.id,
+        label: resolveConfigLabel(config, index),
+        status,
+        tone,
+      };
+    }),
+  );
+
+  const activeConfig = computed(
+    () => settingsStore.configs.find((config) => config.id === activeConfigId.value) || null,
   );
 
   const activeConfigName = computed(
-    () => currentConfig.value?.name?.trim() || "CPA 接入",
+    () => activeConfig.value?.name?.trim() || "CPA 接入",
   );
 
-  const hasConfiguredCpa = computed(() =>
-    Boolean(currentConfig.value?.baseUrl?.trim() && currentConfig.value?.apiKey?.trim()),
+  const activeDashboardEntry = computed(
+    () => dashboardEntries.value[activeConfigId.value] || createDashboardEntry(),
   );
 
-  const hasDashboardData = computed(
-    () => authFilesSummary.value.total > 0 || usageSummary.value.totalRequests > 0,
+  const loadingDashboard = computed(() =>
+    Object.values(dashboardEntries.value).some((entry) => entry.loading),
   );
+
+  const dashboardError = computed(() => activeDashboardEntry.value.error);
+  const hasConfiguredCpa = computed(() => isConfigReady(activeConfig.value));
+  const hasDashboardData = computed(() => hasEntryData(activeDashboardEntry.value));
 
   const latestRequestHour = computed(() =>
-    getLatestHourEntry(usageSummary.value.requestsByHour),
+    getLatestHourEntry(activeDashboardEntry.value.usageSummary.requestsByHour),
   );
   const latestTokenHour = computed(() =>
-    getLatestHourEntry(usageSummary.value.tokensByHour),
+    getLatestHourEntry(activeDashboardEntry.value.usageSummary.tokensByHour),
   );
+
+  const refreshConfigDashboard = async (config) => {
+    const entry = getDashboardEntry(config.id);
+
+    if (!isConfigReady(config)) {
+      resetDashboardEntry(config.id);
+      entry.error = "当前接入缺少接口地址或密钥，请先完成配置。";
+      return {
+        configId: config.id,
+        status: "skipped",
+      };
+    }
+
+    entry.loading = true;
+    entry.error = "";
+
+    try {
+      const [authFilesResponse, usageResponse] = await Promise.all([
+        fetchCpaManagementAuthFiles(config),
+        fetchCpaManagementUsage(config),
+      ]);
+
+      entry.authFilesSummary = normalizeAuthFilesSummary(authFilesResponse.data);
+      entry.lastUpdatedAt = new Date().toISOString();
+      entry.loaded = true;
+      entry.usageSummary = normalizeUsageSummary(usageResponse.data);
+
+      return {
+        configId: config.id,
+        status: "success",
+      };
+    } catch (error) {
+      console.error(error);
+      entry.error = resolveDashboardErrorMessage(error);
+      entry.loaded = true;
+
+      return {
+        configId: config.id,
+        message: entry.error,
+        status: "error",
+      };
+    } finally {
+      entry.loading = false;
+    }
+  };
+
+  const setActiveConfig = (configId) => {
+    if (!settingsStore.configs.some((config) => config.id === configId)) {
+      return;
+    }
+
+    activeConfigId.value = configId;
+
+    const config = settingsStore.configs.find((item) => item.id === configId);
+    const entry = getDashboardEntry(configId);
+
+    if (config && isConfigReady(config) && !entry.loaded && !entry.loading) {
+      void refreshConfigDashboard(config);
+    }
+  };
 
   const statusBadges = computed(() => {
     const badges = [];
 
     if (hasConfiguredCpa.value) {
-      badges.push({ label: `${activeConfigName.value} 已配置`, tone: "neutral" });
+      badges.push({ label: `${activeConfigName.value} 已接入`, tone: "neutral" });
     } else {
-      badges.push({ label: "未配置 CPA", tone: "warning" });
+      badges.push({ label: "当前配置未完成", tone: "warning" });
     }
 
-    if (authFilesSummary.value.total > 0) {
+    if (activeDashboardEntry.value.authFilesSummary.total > 0) {
       badges.push({
-        label: `账号 ${formatNumber(authFilesSummary.value.active)}/${formatNumber(authFilesSummary.value.total)}`,
+        label: `账号 ${formatNumber(activeDashboardEntry.value.authFilesSummary.active)}/${formatNumber(activeDashboardEntry.value.authFilesSummary.total)}`,
         tone: "success",
       });
     } else {
       badges.push({
-        label: loadingDashboard.value ? "数据刷新中" : "等待首次同步",
+        label: loadingDashboard.value ? "数据刷新中" : "等待当前配置同步",
         tone: "neutral",
       });
     }
 
     if (dashboardError.value) {
-      badges.push({ label: "最近刷新失败", tone: "danger" });
-    } else if (usageSummary.value.totalRequests > 0) {
+      badges.push({ label: "当前配置刷新失败", tone: "danger" });
+    } else if (activeDashboardEntry.value.usageSummary.totalRequests > 0) {
       badges.push({
-        label: `请求 ${formatNumber(usageSummary.value.totalRequests)}`,
+        label: `请求 ${formatNumber(activeDashboardEntry.value.usageSummary.totalRequests)}`,
         tone: "accent",
       });
     } else {
@@ -101,87 +265,101 @@ const useDashboardData = () => {
   const accountMetrics = computed(() => [
     {
       label: "总账号数",
-      value: formatNumber(authFilesSummary.value.total),
-      note: `文件提供方 ${formatNumber(authFilesSummary.value.providers)} 个`,
+      note: `文件提供方 ${formatNumber(activeDashboardEntry.value.authFilesSummary.providers)} 个`,
       tone: "neutral",
+      value: formatNumber(activeDashboardEntry.value.authFilesSummary.total),
     },
     {
       label: "活跃账号",
-      value: formatNumber(authFilesSummary.value.active),
-      note: `活跃占比 ${formatPercent(authFilesSummary.value.active, authFilesSummary.value.total)}`,
+      note: `活跃占比 ${formatPercent(
+        activeDashboardEntry.value.authFilesSummary.active,
+        activeDashboardEntry.value.authFilesSummary.total,
+      )}`,
       tone: "success",
+      value: formatNumber(activeDashboardEntry.value.authFilesSummary.active),
     },
     {
       label: "已停用",
-      value: formatNumber(authFilesSummary.value.disabled),
-      note: `停用占比 ${formatPercent(authFilesSummary.value.disabled, authFilesSummary.value.total)}`,
+      note: `停用占比 ${formatPercent(
+        activeDashboardEntry.value.authFilesSummary.disabled,
+        activeDashboardEntry.value.authFilesSummary.total,
+      )}`,
       tone: "warning",
+      value: formatNumber(activeDashboardEntry.value.authFilesSummary.disabled),
     },
     {
       label: "不可用",
-      value: formatNumber(authFilesSummary.value.unavailable),
-      note: `异常占比 ${formatPercent(authFilesSummary.value.unavailable, authFilesSummary.value.total)}`,
+      note: `异常占比 ${formatPercent(
+        activeDashboardEntry.value.authFilesSummary.unavailable,
+        activeDashboardEntry.value.authFilesSummary.total,
+      )}`,
       tone: "danger",
+      value: formatNumber(activeDashboardEntry.value.authFilesSummary.unavailable),
     },
   ]);
 
   const cpaMetrics = computed(() => [
     {
       label: "总请求",
-      value: formatNumber(usageSummary.value.totalRequests),
-      note: `今日累计 ${formatNumber(usageSummary.value.todayRequests)}`,
+      note: `今日累计 ${formatNumber(activeDashboardEntry.value.usageSummary.todayRequests)}`,
       tone: "neutral",
+      value: formatNumber(activeDashboardEntry.value.usageSummary.totalRequests),
     },
     {
       label: "成功",
-      value: formatNumber(usageSummary.value.successCount),
-      note: `成功率 ${formatPercent(usageSummary.value.successCount, usageSummary.value.totalRequests)}`,
+      note: `成功率 ${formatPercent(
+        activeDashboardEntry.value.usageSummary.successCount,
+        activeDashboardEntry.value.usageSummary.totalRequests,
+      )}`,
       tone: "success",
+      value: formatNumber(activeDashboardEntry.value.usageSummary.successCount),
     },
     {
       label: "失败",
-      value: formatNumber(usageSummary.value.failureCount),
-      note: `失败率 ${formatPercent(usageSummary.value.failureCount, usageSummary.value.totalRequests)}`,
+      note: `失败率 ${formatPercent(
+        activeDashboardEntry.value.usageSummary.failureCount,
+        activeDashboardEntry.value.usageSummary.totalRequests,
+      )}`,
       tone: "danger",
+      value: formatNumber(activeDashboardEntry.value.usageSummary.failureCount),
     },
     {
       label: "总 Tokens",
-      value: formatCompactNumber(usageSummary.value.totalTokens),
-      note: `今日累计 ${formatCompactNumber(usageSummary.value.todayTokens)}`,
+      note: `今日累计 ${formatCompactNumber(activeDashboardEntry.value.usageSummary.todayTokens)}`,
       tone: "accent",
+      value: formatCompactNumber(activeDashboardEntry.value.usageSummary.totalTokens),
     },
     {
       label: "模型数",
-      value: formatNumber(usageSummary.value.modelCount),
-      note: usageSummary.value.modelNames.join(" / ") || "暂无模型明细",
+      note: activeDashboardEntry.value.usageSummary.modelNames.join(" / ") || "暂无模型明细",
       tone: "neutral",
+      value: formatNumber(activeDashboardEntry.value.usageSummary.modelCount),
     },
     {
       label: "当前小时请求",
-      value: formatNumber(latestRequestHour.value.value),
       note: latestRequestHour.value.label,
       tone: "accent",
+      value: formatNumber(latestRequestHour.value.value),
     },
     {
       label: "当前小时 Tokens",
-      value: formatCompactNumber(latestTokenHour.value.value),
       note: latestTokenHour.value.label,
       tone: "accent",
+      value: formatCompactNumber(latestTokenHour.value.value),
     },
   ]);
 
   const linkCards = computed(() => [
     {
-      name: activeConfigName.value
-        ? `${activeConfigName.value} 管理接口`
-        : "CPA 聚合服务",
       description: dashboardError.value
-        ? "配置已接入，但最近一次刷新失败，请检查接口地址、密钥或 CORS。"
-        : "使用已保存的 CPA 配置拉取认证文件与用量统计。",
-      endpoint: currentConfig.value?.baseUrl?.trim() || "未配置接口地址",
-      metric: usageSummary.value.totalRequests
-        ? `请求 ${formatNumber(usageSummary.value.totalRequests)}`
+        ? "该接入最近一次刷新失败，请检查接口地址、密钥或 CORS。"
+        : "使用当前选中的配置拉取认证文件与用量统计。",
+      endpoint: activeConfig.value?.baseUrl?.trim() || "未配置接口地址",
+      icon: Monitor,
+      metric: activeDashboardEntry.value.usageSummary.totalRequests
+        ? `请求 ${formatNumber(activeDashboardEntry.value.usageSummary.totalRequests)}`
         : "等待首次同步",
+      name: activeConfigName.value ? `${activeConfigName.value} 管理接口` : "CPA 聚合服务",
       status: dashboardError.value
         ? "异常"
         : hasDashboardData.value
@@ -192,29 +370,28 @@ const useDashboardData = () => {
         : hasDashboardData.value
           ? "success"
           : "neutral",
-      icon: Monitor,
     },
     {
-      name: "Auth Files",
       description: "认证文件总量、停用文件与不可用文件状态。",
       endpoint: "/v0/management/auth-files",
-      metric: authFilesSummary.value.total
-        ? `文件 ${formatNumber(authFilesSummary.value.total)}`
-        : "等待同步",
-      status: authFilesSummary.value.total ? "已同步" : "待同步",
-      tone: authFilesSummary.value.total ? "accent" : "neutral",
       icon: Connection,
+      metric: activeDashboardEntry.value.authFilesSummary.total
+        ? `文件 ${formatNumber(activeDashboardEntry.value.authFilesSummary.total)}`
+        : "等待同步",
+      name: "Auth Files",
+      status: activeDashboardEntry.value.authFilesSummary.total ? "已同步" : "待同步",
+      tone: activeDashboardEntry.value.authFilesSummary.total ? "accent" : "neutral",
     },
     {
-      name: "Usage 统计",
       description: "请求量、失败数与按小时 Token 消耗概览。",
       endpoint: "/v0/management/usage",
-      metric: usageSummary.value.totalTokens
-        ? `Tokens ${formatCompactNumber(usageSummary.value.totalTokens)}`
-        : "等待同步",
-      status: usageSummary.value.totalRequests ? "已同步" : "待同步",
-      tone: usageSummary.value.totalRequests ? "accent" : "neutral",
       icon: DataAnalysis,
+      metric: activeDashboardEntry.value.usageSummary.totalTokens
+        ? `Tokens ${formatCompactNumber(activeDashboardEntry.value.usageSummary.totalTokens)}`
+        : "等待同步",
+      name: "Usage 统计",
+      status: activeDashboardEntry.value.usageSummary.totalRequests ? "已同步" : "待同步",
+      tone: activeDashboardEntry.value.usageSummary.totalRequests ? "accent" : "neutral",
     },
   ]);
 
@@ -244,76 +421,74 @@ const useDashboardData = () => {
   });
 
   const lastUpdatedText = computed(() =>
-    formatDashboardTimestamp(lastUpdatedAt.value),
+    formatDashboardTimestamp(activeDashboardEntry.value.lastUpdatedAt),
   );
 
   const dataSourceText = computed(() => {
-    if (!currentConfig.value?.baseUrl?.trim()) {
+    if (!activeConfig.value?.baseUrl?.trim()) {
       return "请先在设置页保存一个可用的 CPA 接入";
     }
 
-    return `${activeConfigName.value} / ${currentConfig.value.baseUrl.trim()}`;
+    return `${activeConfigName.value} / ${activeConfig.value.baseUrl.trim()}`;
   });
 
   const refreshDashboard = async ({ showToast = false } = {}) => {
     await settingsStore.loadSettings();
+    syncDashboardEntries(settingsStore.configs);
 
-    if (!currentConfig.value) {
-      resetDashboardData();
-      dashboardError.value = "请先在设置页新增并保存一个 CPA 接入。";
+    if (!settingsStore.configs.length) {
+      activeConfigId.value = "";
+
       if (showToast) {
-        ElMessage.warning(dashboardError.value);
+        ElMessage.warning("请先在设置页新增一个 CPA 接入");
       }
       return;
     }
 
-    if (!hasConfiguredCpa.value) {
-      resetDashboardData();
-      dashboardError.value = "当前 CPA 接入缺少接口地址或密钥，请先完成配置后再刷新。";
-      if (showToast) {
-        ElMessage.warning(dashboardError.value);
-      }
+    if (!activeConfigId.value) {
+      activeConfigId.value = resolveDefaultConfigId(settingsStore.configs);
+    }
+
+    const results = await Promise.all(
+      settingsStore.configs.map((config) => refreshConfigDashboard(config)),
+    );
+
+    if (!showToast) {
       return;
     }
 
-    loadingDashboard.value = true;
-    dashboardError.value = "";
+    const successCount = results.filter((item) => item.status === "success").length;
+    const errorCount = results.filter((item) => item.status === "error").length;
+    const skippedCount = results.filter((item) => item.status === "skipped").length;
 
-    try {
-      const [authFilesResponse, usageResponse] = await Promise.all([
-        fetchCpaManagementAuthFiles(currentConfig.value),
-        fetchCpaManagementUsage(currentConfig.value),
-      ]);
-
-      authFilesSummary.value = normalizeAuthFilesSummary(authFilesResponse.data);
-      usageSummary.value = normalizeUsageSummary(usageResponse.data);
-      lastUpdatedAt.value = new Date().toISOString();
-
-      if (showToast) {
-        ElMessage.success("面板数据已刷新");
-      }
-    } catch (error) {
-      console.error(error);
-      dashboardError.value = resolveDashboardErrorMessage(error);
-
-      if (showToast) {
-        ElMessage.error(dashboardError.value);
-      }
-    } finally {
-      loadingDashboard.value = false;
+    if (successCount > 0 && errorCount === 0 && skippedCount === 0) {
+      ElMessage.success(`已刷新 ${successCount} 个配置`);
+      return;
     }
+
+    if (successCount === 0 && skippedCount === results.length) {
+      ElMessage.warning("没有可刷新的接入，请先补全接口地址和密钥");
+      return;
+    }
+
+    ElMessage.warning(
+      `已刷新 ${successCount} 个配置，异常 ${errorCount} 个，待配置 ${skippedCount} 个`,
+    );
   };
 
   return {
     accountMetrics,
+    activeConfigId,
+    configTabs,
     cpaMetrics,
     dashboardError,
     dataSourceText,
+    lastUpdatedText,
     linkCards,
     linkSummary,
     loadingDashboard,
-    lastUpdatedText,
     refreshDashboard,
+    setActiveConfig,
     statusBadges,
   };
 };
