@@ -15,7 +15,7 @@ class Http {
       baseURL: BASE_URL,
       timeout: TIMEOUT,
       // 允许携带 cookie
-      withCredentials: true,
+      withCredentials: false,
     });
 
     // 是否已经刷新token

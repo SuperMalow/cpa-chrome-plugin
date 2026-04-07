@@ -181,10 +181,19 @@
         </span>
       </div>
 
-      <div class="flex justify-end">
+      <div class="flex items-center justify-end gap-2">
+        <button
+          class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-slate-200 bg-white/82 px-3 text-[10px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_rgba(112,136,181,0.12)] disabled:cursor-not-allowed disabled:opacity-70 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900/84 dark:hover:shadow-[0_10px_20px_rgba(2,6,23,0.24)]"
+          type="button" :disabled="saving || testing" @click="$emit('test')">
+          <el-icon>
+            <Link />
+          </el-icon>
+          <span class="text-sm">{{ testing ? "测试中..." : "测试链接" }}</span>
+        </button>
+
         <button
           class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 text-[10px] font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-50/92 hover:shadow-[0_10px_20px_rgba(59,130,246,0.12)] disabled:cursor-not-allowed disabled:opacity-70 dark:border-sky-700/70 dark:bg-sky-500/18 dark:text-sky-300 dark:hover:border-sky-600 dark:hover:bg-sky-500/24 dark:hover:shadow-[0_10px_20px_rgba(2,132,199,0.18)]"
-          type="button" :disabled="saving" @click="$emit('save')">
+          type="button" :disabled="saving || testing" @click="$emit('save')">
           <el-icon>
             <Check />
           </el-icon>
@@ -224,9 +233,13 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  testing: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["update", "duplicate", "remove", "save"]);
+const emit = defineEmits(["update", "duplicate", "remove", "save", "test"]);
 
 const timeoutPresets = [15, 30, 60];
 const showSecret = ref(false);

@@ -107,7 +107,8 @@
 
         <div v-else-if="activeConfig" class="mt-5">
           <CpaSettingsCard :config="activeConfig" :index="activeConfigIndex" :saving="settingsStore.saving"
-            @update="handleUpdate" @duplicate="handleDuplicate" @remove="handleRemove" @save="handleSave" />
+            :testing="testingLink" @update="handleUpdate" @duplicate="handleDuplicate" @remove="handleRemove"
+            @save="handleSave" @test="handleTestLink" />
         </div>
       </section>
     </main>
@@ -119,6 +120,7 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import { ElIcon, ElMessage } from "element-plus";
 import { ArrowLeft, Plus } from "@element-plus/icons-vue";
+import { testCpaManagementConfig } from "@/api/cpaManagement";
 import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
 import CpaConfigSelector from "@/components/settings/CpaConfigSelector.vue";
 import CpaSettingsCard from "@/components/settings/CpaSettingsCard.vue";
@@ -128,6 +130,7 @@ import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
 const router = useRouter();
 const settingsStore = useCpaSettingsStore();
 const activeConfigId = ref("");
+const testingLink = ref(false);
 
 const activeAuthCount = computed(
   () => settingsStore.authSummary.filter((item) => item.count > 0).length,
@@ -236,6 +239,59 @@ const handleSave = async () => {
   } catch (error) {
     console.error(error);
     ElMessage.error("保存失败，请稍后重试");
+  }
+};
+
+const resolveTestErrorMessage = (error) => {
+  const status = error?.response?.status;
+  const responseMessage =
+    error?.response?.data?.message
+    || error?.response?.data?.detail
+    || error?.response?.data?.error;
+
+  if (responseMessage) {
+    return typeof responseMessage === "string"
+      ? responseMessage
+      : JSON.stringify(responseMessage);
+  }
+
+  if (status) {
+    return `请求失败，状态码 ${status}`;
+  }
+
+  if (error?.message === "Network Error") {
+    return "请求被浏览器拦截，通常是接口未正确放行 CORS，请检查 Origin、Authorization 和 OPTIONS 预检";
+  }
+
+  return error?.message || "测试失败，请稍后重试";
+};
+
+const handleTestLink = async () => {
+  if (!activeConfig.value) {
+    ElMessage.warning("请先选择一个 CPA 接入");
+    return;
+  }
+
+  if (!activeConfig.value.baseUrl?.trim()) {
+    ElMessage.warning("请先填写 CPA 接口地址");
+    return;
+  }
+
+  if (!activeConfig.value.apiKey?.trim()) {
+    ElMessage.warning("请先填写密钥");
+    return;
+  }
+
+  testingLink.value = true;
+
+  try {
+    const response = await testCpaManagementConfig(activeConfig.value);
+    ElMessage.success(`测试成功，状态码 ${response.status}`);
+  } catch (error) {
+    console.error(error);
+    ElMessage.error(resolveTestErrorMessage(error));
+  } finally {
+    testingLink.value = false;
   }
 };
 
