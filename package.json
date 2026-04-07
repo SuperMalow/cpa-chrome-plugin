@@ -1,0 +1,27 @@
+{
+  "name": "browerplugins",
+  "private": true,
+  "version": "0.0.0",
+  "description": "一个系统面板聚合chrome插件",
+  "author": "shengwen",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@tailwindcss/vite": "^4.1.16",
+    "axios": "^1.12.2",
+    "element-plus": "^2.11.5",
+    "pinia": "^3.0.3",
+    "tailwindcss": "^4.1.16",
+    "vue": "^3.5.13",
+    "vue-router": "^4.6.3"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "daisyui": "^5.5.14",
+    "vite": "^6.1.0"
+  }
+}
