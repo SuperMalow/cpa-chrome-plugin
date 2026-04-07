@@ -10,20 +10,20 @@
         <span :class="['mt-1 inline-flex h-2.5 w-2.5 rounded-full', dotToneClass]"></span>
       </div>
 
-      <div class="stat-title max-w-full pr-1 text-sm font-medium leading-5 text-slate-500 whitespace-normal break-words dark:text-slate-400">
+      <div class="stat-title max-w-full pr-1 text-[13px] font-semibold leading-5 text-slate-500 whitespace-normal break-words dark:text-slate-400">
         {{ label }}
       </div>
 
       <div
         :class="[
-          'stat-value max-w-full overflow-hidden tabular-nums text-[clamp(1.9rem,1.8vw,2.35rem)] leading-none tracking-[-0.05em]',
+          'stat-value max-w-full overflow-hidden tabular-nums text-[clamp(1.65rem,1.6vw,2.05rem)] font-bold leading-none tracking-[-0.05em]',
           valueToneClass,
         ]"
       >
         {{ value }}
       </div>
 
-      <div :class="['stat-desc mt-1 max-w-full text-sm leading-5 whitespace-normal break-words', descToneClass]">
+      <div :class="['stat-desc mt-1 max-w-full text-[13px] leading-5 whitespace-normal break-words', descToneClass]">
         {{ note }}
       </div>
     </div>

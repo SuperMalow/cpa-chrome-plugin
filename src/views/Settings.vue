@@ -5,17 +5,17 @@
         <span class="inline-flex items-center rounded-full border border-slate-200 bg-white/80 px-3 py-1.5 text-xs font-semibold tracking-[0.04em] text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300">
           多接入配置
         </span>
-        <h1 class="mt-3 text-[clamp(2rem,4vw,2.6rem)] leading-none tracking-[-0.04em] text-slate-800 dark:text-slate-100">
+        <h1 class="mt-3 text-[clamp(1.75rem,3vw,2.2rem)] font-bold leading-none tracking-[-0.04em] text-slate-800 dark:text-slate-100">
           设置中心
         </h1>
-        <p class="mt-2 text-base text-slate-500 dark:text-slate-400">
+        <p class="mt-2 text-[15px] text-slate-500 dark:text-slate-400">
           维护 CPA 接口地址、密钥、鉴权方式与超时时间，支持多个接入并行管理。
         </p>
       </div>
 
       <div class="flex w-full flex-wrap justify-end gap-3 lg:w-auto">
         <button
-          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_24px_rgba(112,136,181,0.12)] dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-900/86 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
+          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 text-[13px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_24px_rgba(112,136,181,0.12)] dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-900/86 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
           type="button"
           @click="router.push({ name: 'home' })"
         >
@@ -24,7 +24,7 @@
         </button>
 
         <button
-          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_24px_rgba(112,136,181,0.12)] dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-900/86 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
+          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-slate-200 bg-white/85 px-4 text-[13px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_24px_rgba(112,136,181,0.12)] dark:border-slate-700/80 dark:bg-slate-900/70 dark:text-slate-100 dark:hover:border-slate-600 dark:hover:bg-slate-900/86 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
           type="button"
           @click="settingsStore.addConfig()"
         >
@@ -33,7 +33,7 @@
         </button>
 
         <button
-          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-br from-blue-500 to-indigo-600 px-4 text-sm font-semibold text-white transition hover:brightness-105 hover:shadow-[0_10px_24px_rgba(91,140,255,0.18)] disabled:cursor-not-allowed disabled:opacity-70"
+          class="inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-br from-blue-500 to-indigo-600 px-4 text-[13px] font-semibold text-white transition hover:brightness-105 hover:shadow-[0_10px_24px_rgba(91,140,255,0.18)] disabled:cursor-not-allowed disabled:opacity-70"
           type="button"
           :disabled="settingsStore.saving"
           @click="handleSave"
@@ -71,8 +71,8 @@
       <section class="rounded-[28px] border border-slate-200/90 bg-white/62 p-4 shadow-[0_24px_64px_rgba(134,154,192,0.16)] backdrop-blur-xl md:p-5 dark:border-slate-800 dark:bg-slate-900/54 dark:shadow-[0_24px_64px_rgba(2,6,23,0.34)]">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
           <div>
-            <h2 class="text-[32px] leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">CPA 接入列表</h2>
-            <p class="mt-1 text-sm leading-6 text-slate-500 dark:text-slate-400">
+            <h2 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">CPA 接入列表</h2>
+            <p class="mt-1 text-[13px] leading-6 text-slate-500 dark:text-slate-400">
               每个接入独立维护自己的接口地址、密钥与鉴权策略，方便同时接入多个 CPA 服务。
             </p>
           </div>
@@ -80,7 +80,7 @@
           <div class="flex flex-wrap gap-2.5">
             <span
               :class="[
-                'inline-flex min-h-10 items-center rounded-full border px-4 text-sm font-semibold',
+                'inline-flex min-h-10 items-center rounded-full border px-4 text-[13px] font-semibold',
                 settingsStore.dirty
                   ? 'border-amber-200 bg-amber-50 text-amber-700'
                   : 'border-emerald-200 bg-emerald-50 text-emerald-700',
@@ -94,7 +94,7 @@
 
             <span
               v-if="settingsStore.lastSavedAt"
-              class="inline-flex min-h-10 items-center rounded-full border border-slate-200 bg-slate-50 px-4 text-sm font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
+              class="inline-flex min-h-10 items-center rounded-full border border-slate-200 bg-slate-50 px-4 text-[13px] font-semibold text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300"
             >
               最近保存：{{ lastSavedText }}
             </span>
@@ -105,12 +105,12 @@
           v-if="!settingsStore.configs.length"
           class="mt-5 rounded-[24px] border border-dashed border-slate-300 bg-slate-50/80 p-8 text-center dark:border-slate-700 dark:bg-slate-950/46"
         >
-          <h3 class="text-xl font-semibold text-slate-700 dark:text-slate-100">还没有任何 CPA 接入</h3>
-          <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+          <h3 class="text-lg font-bold text-slate-700 dark:text-slate-100">还没有任何 CPA 接入</h3>
+          <p class="mt-2 text-[13px] text-slate-500 dark:text-slate-400">
             先新增一个接入配置，再填写接口地址、密钥和鉴权方式。
           </p>
           <button
-            class="mt-4 inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-br from-blue-500 to-indigo-600 px-4 text-sm font-semibold text-white transition hover:brightness-105 hover:shadow-[0_10px_24px_rgba(91,140,255,0.18)]"
+            class="mt-4 inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border border-transparent bg-gradient-to-br from-blue-500 to-indigo-600 px-4 text-[13px] font-semibold text-white transition hover:brightness-105 hover:shadow-[0_10px_24px_rgba(91,140,255,0.18)]"
             type="button"
             @click="settingsStore.addConfig()"
           >

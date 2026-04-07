@@ -9,7 +9,7 @@
                 v-for="tab in tabs"
                 :key="tab"
                 :class="[
-                  'inline-flex min-h-10 cursor-pointer items-center rounded-2xl border px-4 text-sm font-semibold whitespace-nowrap transition hover:shadow-[0_10px_24px_rgba(112,136,181,0.1)]',
+                  'inline-flex min-h-10 cursor-pointer items-center rounded-2xl border px-4 text-[13px] font-semibold whitespace-nowrap transition hover:shadow-[0_10px_24px_rgba(112,136,181,0.1)]',
                   tab === activeTab
                     ? 'border-blue-200/90 bg-blue-50/90 text-blue-600 hover:border-blue-300 hover:bg-blue-50 dark:border-sky-700/70 dark:bg-sky-500/18 dark:text-sky-300 dark:hover:border-sky-600 dark:hover:bg-sky-500/24'
                     : 'border-white/70 bg-white/52 text-slate-700 backdrop-blur-md hover:border-slate-200 hover:bg-white/66 dark:border-slate-700/70 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900/56',
@@ -28,7 +28,7 @@
             <button
               v-for="action in actions"
               :key="action.label"
-              class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-2xl border border-white/70 bg-white/52 px-4 text-sm font-semibold text-slate-700 whitespace-nowrap backdrop-blur-md transition hover:border-slate-200 hover:bg-white/66 hover:shadow-[0_10px_24px_rgba(112,136,181,0.1)] dark:border-slate-700/70 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900/56 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
+              class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-2xl border border-white/70 bg-white/52 px-4 text-[13px] font-semibold text-slate-700 whitespace-nowrap backdrop-blur-md transition hover:border-slate-200 hover:bg-white/66 hover:shadow-[0_10px_24px_rgba(112,136,181,0.1)] dark:border-slate-700/70 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900/56 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
               type="button"
               @click="$emit('action', action)"
             >

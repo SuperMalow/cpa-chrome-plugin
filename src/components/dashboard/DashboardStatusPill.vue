@@ -1,7 +1,7 @@
 <template>
   <span
     :class="[
-      'inline-flex min-h-9 items-center rounded-full border px-3.5 text-sm font-semibold whitespace-nowrap',
+      'inline-flex min-h-8 items-center rounded-full border px-3 text-[13px] font-semibold whitespace-nowrap',
       toneClass,
     ]"
   >

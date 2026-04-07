@@ -6,9 +6,9 @@
     ]"
   >
     <div class="stat px-5 py-4">
-      <div class="stat-title text-sm font-medium text-slate-500">{{ label }}</div>
-      <div :class="['stat-value text-4xl tabular-nums', valueClass]">{{ value }}</div>
-      <div class="stat-desc text-sm">{{ note }}</div>
+      <div class="stat-title text-[13px] font-semibold text-slate-500 dark:text-slate-400">{{ label }}</div>
+      <div :class="['stat-value text-[clamp(1.8rem,2.6vw,2.2rem)] font-bold tabular-nums', valueClass]">{{ value }}</div>
+      <div class="stat-desc text-[13px] text-slate-500 dark:text-slate-400">{{ note }}</div>
     </div>
   </article>
 </template>

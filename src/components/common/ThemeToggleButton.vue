@@ -1,7 +1,7 @@
 <template>
   <button
     :class="[
-      'inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border px-4 text-sm font-semibold transition',
+      'inline-flex h-11 cursor-pointer items-center gap-2 rounded-2xl border px-4 text-[13px] font-semibold transition',
       isDarkTheme
         ? 'border-slate-700/80 bg-slate-900/70 text-slate-100 hover:border-slate-600 hover:bg-slate-900/86 hover:shadow-[0_10px_24px_rgba(15,23,42,0.28)]'
         : 'border-slate-200 bg-white/85 text-slate-700 hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_24px_rgba(112,136,181,0.12)]',

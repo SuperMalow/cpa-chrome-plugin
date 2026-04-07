@@ -15,8 +15,8 @@
     <main class="mx-auto w-full max-w-[1180px] rounded-[28px] border border-slate-200/90 bg-white/75 p-4 shadow-[0_24px_64px_rgba(134,154,192,0.2)] backdrop-blur md:p-5 dark:border-slate-800 dark:bg-slate-900/62 dark:shadow-[0_24px_64px_rgba(2,6,23,0.34)]">
       <section class="mb-5 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h2 class="text-[32px] leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">今日总览</h2>
-          <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">注册、账号、CPA 一屏看完。</p>
+          <h2 class="text-[28px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">今日总览</h2>
+          <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">注册、账号、CPA 一屏看完。</p>
         </div>
 
         <div class="flex flex-wrap gap-2.5 lg:justify-end">
@@ -53,11 +53,11 @@
           grid-class="grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4"
         >
           <div class="mt-4 rounded-3xl border border-amber-200 bg-gradient-to-b from-amber-50 to-amber-100/80 p-4 dark:border-amber-900/60 dark:from-amber-950/50 dark:to-amber-950/35">
-            <div class="inline-flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-300">
+            <div class="inline-flex items-center gap-2 text-sm font-bold text-amber-700 dark:text-amber-300">
               <el-icon><WarningFilled /></el-icon>
               本次刷新未完整返回
             </div>
-            <p class="mt-2 text-sm leading-6 text-amber-800 dark:text-amber-200/80">
+            <p class="mt-2 text-[13px] leading-6 text-amber-800 dark:text-amber-200/80">
               已保留上次数据。Unexpected token '&lt;', '&lt;!doctype' ... is not valid JSON;
               Unexpected token '&lt;', '&lt;!doctype' ... is not valid JSON
             </p>
@@ -68,8 +68,8 @@
       <section class="mt-4 rounded-[22px] border border-slate-200 bg-gradient-to-b from-slate-50/90 to-slate-100/70 p-4 dark:border-slate-800 dark:from-slate-900/80 dark:to-slate-950/72">
         <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
           <div>
-            <h3 class="text-[28px] leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">联控链路</h3>
-            <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">本地服务、云端接口与任务状态。</p>
+            <h3 class="text-[24px] font-bold leading-tight tracking-[-0.03em] text-slate-800 dark:text-slate-100">联控链路</h3>
+            <p class="mt-1 text-[13px] text-slate-500 dark:text-slate-400">本地服务、云端接口与任务状态。</p>
           </div>
 
           <DashboardStatusPill label="3 条链路在线" tone="accent" />
@@ -92,7 +92,7 @@
         />
       </section>
 
-      <footer class="mt-5 flex flex-col gap-2 border-t border-slate-200/80 pt-4 text-sm text-slate-500 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:text-slate-400">
+      <footer class="mt-5 flex flex-col gap-2 border-t border-slate-200/80 pt-4 text-[13px] text-slate-500 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:text-slate-400">
         <span>最近更新：2026-04-07 13:52</span>
         <span>数据源：本地服务 / 云端服务 / 浏览器缓存</span>
       </footer>
