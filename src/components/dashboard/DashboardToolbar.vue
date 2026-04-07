@@ -22,7 +22,7 @@
             </div>
           </div>
 
-          <div class="h-8 w-px shrink-0 bg-white/55 dark:bg-slate-700/70"></div>
+          <div class="hidden h-8 w-px shrink-0 bg-white/55 dark:bg-slate-700/70 sm:block"></div>
 
           <div class="hidden shrink-0 items-center gap-2.5 sm:inline-flex">
             <button
@@ -38,41 +38,6 @@
               {{ action.label }}
             </button>
           </div>
-
-          <el-dropdown
-            class="shrink-0 sm:hidden"
-            trigger="click"
-            placement="top-end"
-            @command="handleCommand"
-          >
-            <button
-              class="inline-flex min-h-10 cursor-pointer items-center gap-2 rounded-2xl border border-white/70 bg-white/52 px-4 text-sm font-semibold text-slate-700 whitespace-nowrap backdrop-blur-md transition hover:border-slate-200 hover:bg-white/66 hover:shadow-[0_10px_24px_rgba(112,136,181,0.1)] dark:border-slate-700/70 dark:bg-slate-900/40 dark:text-slate-200 dark:hover:border-slate-600 dark:hover:bg-slate-900/56 dark:hover:shadow-[0_10px_24px_rgba(2,6,23,0.28)]"
-              type="button"
-            >
-              <el-icon>
-                <Operation />
-              </el-icon>
-              菜单
-            </button>
-
-            <template #dropdown>
-              <el-dropdown-menu class="min-w-[180px] rounded-2xl border border-white/70 bg-white/80 p-1 shadow-[0_18px_40px_rgba(134,154,192,0.22)] backdrop-blur-xl">
-                <el-dropdown-item
-                  v-for="action in actions"
-                  :key="action.label"
-                  :command="action"
-                  class="rounded-xl"
-                >
-                  <div class="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <el-icon>
-                      <component :is="action.icon" />
-                    </el-icon>
-                    <span>{{ action.label }}</span>
-                  </div>
-                </el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
         </div>
       </div>
     </div>
@@ -80,15 +45,9 @@
 </template>
 
 <script setup>
-import {
-  ElDropdown,
-  ElDropdownItem,
-  ElDropdownMenu,
-  ElIcon,
-} from "element-plus";
-import { Operation } from "@element-plus/icons-vue";
+import { ElIcon } from "element-plus";
 
-const emit = defineEmits(["select-tab", "action"]);
+defineEmits(["select-tab", "action"]);
 
 defineProps({
   tabs: {
@@ -104,8 +63,4 @@ defineProps({
     default: () => [],
   },
 });
-
-const handleCommand = (action) => {
-  emit("action", action);
-};
 </script>
