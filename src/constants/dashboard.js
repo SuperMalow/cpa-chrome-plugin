@@ -5,7 +5,7 @@ import {
   UserFilled,
 } from "@element-plus/icons-vue";
 
-const DASHBOARD_FOCUS_TABS = ["CPA面板"];
+const DASHBOARD_FOCUS_TABS = ["CPA 面板"];
 
 const DASHBOARD_QUICK_ACTIONS = [
   { key: "open-cpa", label: "前往 CPA", icon: Link },

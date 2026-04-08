@@ -92,7 +92,7 @@ import {
 
 const router = useRouter();
 const settingsStore = useCpaSettingsStore();
-const activeTab = ref("CPA面板");
+const activeTab = ref("CPA 面板");
 const {
   accountMetrics,
   activeConfigId,

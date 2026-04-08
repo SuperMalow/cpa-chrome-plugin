@@ -92,7 +92,7 @@ const props = defineProps({
 const activeKey = ref("");
 
 const defaultItem = computed(() =>
-  props.items.at(-1) || props.items[0] || null,
+  props.items.find((item) => item?.isDefaultActive) || props.items.at(-1) || props.items[0] || null,
 );
 
 const activeItem = computed(() =>

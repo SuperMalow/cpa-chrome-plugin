@@ -27,6 +27,8 @@ const createEmptyUsageSummary = () => ({
   totalTokens: 0,
   todayRequests: 0,
   todayTokens: 0,
+  requestsByDay: {},
+  tokensByDay: {},
   requestsByHour: {},
   tokensByHour: {},
   modelNames: [],
@@ -44,6 +46,45 @@ const formatPercent = (part, total) =>
 
 const formatDashboardTimestamp = (value) =>
   value ? dateTimeFormatter.format(new Date(value)) : "未同步";
+
+const TOKEN_TOTAL_KEY_ORDER = [
+  "totaltokens",
+  "totaltoken",
+  "tokens",
+  "tokencount",
+  "usagetokens",
+];
+const TOKEN_INPUT_KEY_ORDER = [
+  "prompttokens",
+  "prompttoken",
+  "inputtokens",
+  "inputtoken",
+];
+const TOKEN_OUTPUT_KEY_ORDER = [
+  "completiontokens",
+  "completiontoken",
+  "outputtokens",
+  "outputtoken",
+];
+
+const normalizeMetricKey = (key) =>
+  String(key || "").replace(/[^a-z0-9]/gi, "").toLowerCase();
+
+const normalizeMetricNumber = (value) => {
+  const normalizedValue = Number(value);
+
+  return Number.isFinite(normalizedValue) ? normalizedValue : null;
+};
+
+const resolveFirstMetricValue = (metrics = {}, keyOrder = []) => {
+  for (const key of keyOrder) {
+    if (metrics[key] !== undefined) {
+      return metrics[key];
+    }
+  }
+
+  return null;
+};
 
 const resolveHealthLevel = (value, peakValue) => {
   if (value <= 0 || peakValue <= 0) {
@@ -110,31 +151,181 @@ const buildLast24HourSlots = (referenceDate = new Date()) => {
   });
 };
 
-const buildHourlyMetricTimeline = (
-  buckets = {},
+const buildDetailMetricTimeline = (
+  details = [],
+  resolveMetricValue = () => ({ hasSource: false, value: 0 }),
   referenceDate = new Date(),
 ) => {
-  const now = new Date(referenceDate);
-  now.setMinutes(0, 0, 0);
+  const slots = buildLast24HourSlots(referenceDate).map((slot) => ({
+    ...slot,
+    rangeLabel: `${slot.label} - ${slot.hour}:59`,
+    value: 0,
+  }));
+  const slotMap = Object.fromEntries(
+    slots.map((slot) => [slot.key, slot]),
+  );
+  let hasSource = false;
 
-  const rawItems = buildLast24HourSlots(referenceDate).map((slot) => {
-    const isSameDay = slot.slotDate.toDateString() === now.toDateString();
-    const value = isSameDay ? Number(buckets[slot.hour] || 0) : 0;
+  details.forEach((detail) => {
+    if (!detail?.timestamp) {
+      return;
+    }
 
-    return {
-      ...slot,
-      value,
-    };
+    const metric = resolveMetricValue(detail) || {};
+
+    if (metric.hasSource) {
+      hasSource = true;
+    }
+
+    const detailDate = new Date(detail.timestamp);
+
+    if (Number.isNaN(detailDate.getTime())) {
+      return;
+    }
+
+    detailDate.setMinutes(0, 0, 0);
+
+    const detailKey = [
+      detailDate.getFullYear(),
+      String(detailDate.getMonth() + 1).padStart(2, "0"),
+      String(detailDate.getDate()).padStart(2, "0"),
+      String(detailDate.getHours()).padStart(2, "0"),
+    ].join("-");
+    const slot = slotMap[detailKey];
+
+    if (!slot) {
+      return;
+    }
+
+    slot.value += Number(metric.value) || 0;
   });
 
-  const peakValue = Math.max(...rawItems.map((item) => item.value), 0);
-
-  return rawItems.map((item) => ({
+  const peakValue = Math.max(...slots.map((item) => item.value), 0);
+  const timeline = slots.map((item) => ({
     ...item,
+    isUnavailable: !hasSource,
     level: resolveHealthLevel(item.value, peakValue),
     ratio: peakValue > 0 ? item.value / peakValue : 0,
-    tooltip: `${item.label} · ${formatNumber(item.value)}`,
+    tooltip: `${item.rangeLabel} · ${formatNumber(item.value)}`,
   }));
+  const totalValue = timeline.reduce(
+    (total, item) => total + (Number(item.value) || 0),
+    0,
+  );
+  const latestActiveHour =
+    [...timeline].reverse().find((item) => item.value > 0) || null;
+
+  return {
+    currentHour: timeline.at(-1) || null,
+    hasSource,
+    latestActiveHour,
+    timeline,
+    totalValue,
+  };
+};
+
+const buildRequestVolumeTimeline = (details = [], referenceDate = new Date()) =>
+  (() => {
+    const result = buildDetailMetricTimeline(
+      details,
+      () => ({
+        hasSource: true,
+        value: 1,
+      }),
+      referenceDate,
+    );
+
+    return {
+      ...result,
+      hasSource: true,
+      timeline: result.timeline.map((item) => ({
+        ...item,
+        isUnavailable: false,
+      })),
+    };
+  })();
+
+const buildTokenVolumeTimeline = (details = [], referenceDate = new Date()) =>
+  buildDetailMetricTimeline(
+    details,
+    (detail) => ({
+      hasSource: Boolean(detail?.hasTokenData),
+      value: detail?.hasTokenData ? Number(detail.tokens) || 0 : 0,
+    }),
+    referenceDate,
+  );
+
+const extractTokenValueFromNode = (node, visited = new WeakSet()) => {
+  if (!node || typeof node !== "object") {
+    return null;
+  }
+
+  if (visited.has(node)) {
+    return null;
+  }
+
+  visited.add(node);
+
+  if (Array.isArray(node)) {
+    for (const item of node) {
+      const nestedValue = extractTokenValueFromNode(item, visited);
+
+      if (nestedValue !== null) {
+        return nestedValue;
+      }
+    }
+
+    return null;
+  }
+
+  const numericMetrics = Object.entries(node).reduce((accumulator, [rawKey, rawValue]) => {
+    const normalizedValue = normalizeMetricNumber(rawValue);
+
+    if (normalizedValue === null) {
+      return accumulator;
+    }
+
+    accumulator[normalizeMetricKey(rawKey)] = normalizedValue;
+    return accumulator;
+  }, {});
+  const totalTokenValue = resolveFirstMetricValue(numericMetrics, TOKEN_TOTAL_KEY_ORDER);
+
+  if (totalTokenValue !== null) {
+    return totalTokenValue;
+  }
+
+  const inputTokenValue = resolveFirstMetricValue(numericMetrics, TOKEN_INPUT_KEY_ORDER);
+  const outputTokenValue = resolveFirstMetricValue(numericMetrics, TOKEN_OUTPUT_KEY_ORDER);
+
+  if (inputTokenValue !== null || outputTokenValue !== null) {
+    return (inputTokenValue || 0) + (outputTokenValue || 0);
+  }
+
+  for (const value of Object.values(node)) {
+    const nestedValue = extractTokenValueFromNode(value, visited);
+
+    if (nestedValue !== null) {
+      return nestedValue;
+    }
+  }
+
+  return null;
+};
+
+const resolveDetailTokenValue = (detail = {}) => {
+  const tokenValue = extractTokenValueFromNode(detail);
+
+  if (tokenValue !== null) {
+    return {
+      hasTokenData: true,
+      tokens: tokenValue,
+    };
+  }
+
+  return {
+    hasTokenData: false,
+    tokens: 0,
+  };
 };
 
 const buildServiceHealthTimeline = (
@@ -224,29 +415,6 @@ const buildServiceHealthTimeline = (
   };
 };
 
-const getLatestHourEntry = (buckets = {}) => {
-  const keys = Object.keys(buckets);
-
-  if (!keys.length) {
-    return {
-      hour: "--",
-      label: "暂无小时数据",
-      value: 0,
-    };
-  }
-
-  const latestHour = keys
-    .map((key) => String(key).padStart(2, "0"))
-    .sort((left, right) => Number(left) - Number(right))
-    .at(-1);
-
-  return {
-    hour: latestHour,
-    label: `${latestHour}:00 - ${latestHour}:59`,
-    value: Number(buckets[latestHour] || 0),
-  };
-};
-
 const normalizeAuthFilesSummary = (payload) => {
   const files = Array.isArray(payload?.files) ? payload.files : [];
   const disabled = files.filter(
@@ -280,10 +448,16 @@ const normalizeUsageSummary = (payload) => {
       Array.isArray(model?.details)
         ? model.details
           .filter((detail) => detail?.timestamp)
-          .map((detail) => ({
-            failed: Boolean(detail?.failed),
-            timestamp: detail.timestamp,
-          }))
+          .map((detail) => {
+            const tokenInfo = resolveDetailTokenValue(detail);
+
+            return {
+              failed: Boolean(detail?.failed),
+              hasTokenData: tokenInfo.hasTokenData,
+              timestamp: detail.timestamp,
+              tokens: tokenInfo.tokens,
+            };
+          })
         : [],
     ),
   );
@@ -298,14 +472,10 @@ const normalizeUsageSummary = (payload) => {
     successCount: Number(usage?.success_count) || 0,
     failureCount: Number(usage?.failure_count) || 0,
     totalTokens: Number(usage?.total_tokens) || 0,
-    todayRequests: Object.values(requestsByDay).reduce(
-      (total, value) => total + (Number(value) || 0),
-      0,
-    ),
-    todayTokens: Object.values(tokensByDay).reduce(
-      (total, value) => total + (Number(value) || 0),
-      0,
-    ),
+    todayRequests: 0,
+    todayTokens: 0,
+    requestsByDay,
+    tokensByDay,
     requestsByHour,
     tokensByHour,
     modelNames,
@@ -339,15 +509,15 @@ const resolveDashboardErrorMessage = (error) => {
 };
 
 export {
-  buildHourlyMetricTimeline,
+  buildRequestVolumeTimeline,
   buildServiceHealthTimeline,
+  buildTokenVolumeTimeline,
   createEmptyAuthFilesSummary,
   createEmptyUsageSummary,
   formatCompactNumber,
   formatDashboardTimestamp,
   formatNumber,
   formatPercent,
-  getLatestHourEntry,
   normalizeAuthFilesSummary,
   normalizeUsageSummary,
   resolveDashboardErrorMessage,

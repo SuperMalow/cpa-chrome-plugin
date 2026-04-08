@@ -6,15 +6,15 @@ import {
 } from "@/api/cpaManagement";
 import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
 import {
-  buildHourlyMetricTimeline,
+  buildRequestVolumeTimeline,
   buildServiceHealthTimeline,
+  buildTokenVolumeTimeline,
   createEmptyAuthFilesSummary,
   createEmptyUsageSummary,
   formatCompactNumber,
   formatDashboardTimestamp,
   formatNumber,
   formatPercent,
-  getLatestHourEntry,
   normalizeAuthFilesSummary,
   normalizeUsageSummary,
   resolveDashboardErrorMessage,
@@ -68,6 +68,9 @@ const resolveSuccessRateTone = (successRate, total) => {
 
   return "danger";
 };
+
+const TOKEN_TIMELINE_UNAVAILABLE_NOTE =
+  "后端未返回带时间的 Token 明细，暂无法统计最近 24 小时 Token。";
 
 const useDashboardData = () => {
   const settingsStore = useCpaSettingsStore();
@@ -176,23 +179,59 @@ const useDashboardData = () => {
   const dashboardError = computed(() => activeDashboardEntry.value.error);
   const hasConfiguredCpa = computed(() => isConfigReady(activeConfig.value));
 
-  const latestRequestHour = computed(() =>
-    getLatestHourEntry(activeDashboardEntry.value.usageSummary.requestsByHour),
+  const requestMonitorData = computed(() =>
+    buildRequestVolumeTimeline(activeDashboardEntry.value.usageSummary.requestDetails),
   );
-  const latestTokenHour = computed(() =>
-    getLatestHourEntry(activeDashboardEntry.value.usageSummary.tokensByHour),
+  const tokenMonitorData = computed(() =>
+    buildTokenVolumeTimeline(activeDashboardEntry.value.usageSummary.requestDetails),
   );
   const requestMonitorTimeline = computed(() =>
-    buildHourlyMetricTimeline(activeDashboardEntry.value.usageSummary.requestsByHour),
+    requestMonitorData.value.timeline,
   );
   const tokenMonitorTimeline = computed(() =>
-    buildHourlyMetricTimeline(activeDashboardEntry.value.usageSummary.tokensByHour),
+    tokenMonitorData.value.timeline,
   );
-  const last24HourTokens = computed(() =>
-    tokenMonitorTimeline.value.reduce(
-      (total, item) => total + (Number(item?.value) || 0),
-      0,
-    ),
+  const requestLast24HoursTotal = computed(() => requestMonitorData.value.totalValue || 0);
+  const tokenLast24HoursTotal = computed(() => tokenMonitorData.value.totalValue || 0);
+  const requestHourMetric = computed(() => {
+    const currentHour = requestMonitorData.value.currentHour || {
+      rangeLabel: "暂无时段数据",
+      value: 0,
+    };
+
+    return {
+      label: "当前小时请求",
+      note: currentHour.rangeLabel,
+      value: currentHour.value,
+    };
+  });
+  const tokenHourMetric = computed(() => {
+    const currentHour = tokenMonitorData.value.currentHour || {
+      rangeLabel: "暂无时段数据",
+      value: 0,
+    };
+
+    return {
+      available: tokenMonitorData.value.hasSource,
+      label: "当前小时 Tokens",
+      note: tokenMonitorData.value.hasSource
+        ? currentHour.rangeLabel
+        : TOKEN_TIMELINE_UNAVAILABLE_NOTE,
+      value: currentHour.value,
+    };
+  });
+  const token24HourMetric = computed(() => ({
+    available: tokenMonitorData.value.hasSource,
+    label: "24 小时 Tokens",
+    note: tokenMonitorData.value.hasSource
+      ? `24 小时总消耗 ${formatCompactNumber(tokenLast24HoursTotal.value)}`
+      : TOKEN_TIMELINE_UNAVAILABLE_NOTE,
+    value: tokenLast24HoursTotal.value,
+  }));
+  const request24HourSummaryNote = computed(() =>
+    requestLast24HoursTotal.value > 0
+      ? `24 小时总请求 ${formatNumber(requestLast24HoursTotal.value)} 次。`
+      : "最近 24 小时暂无请求。",
   );
   const serviceHealthData = computed(() =>
     buildServiceHealthTimeline(activeDashboardEntry.value.usageSummary.requestDetails),
@@ -334,8 +373,6 @@ const useDashboardData = () => {
 
   const popupMetrics = computed(() => {
     const { currentHour, totals } = serviceHealthData.value;
-    const currentRequest = requestMonitorTimeline.value.at(-1) || { value: 0 };
-    const currentToken = tokenMonitorTimeline.value.at(-1) || { value: 0 };
     const problemAccounts =
       activeDashboardEntry.value.authFilesSummary.disabled
       + activeDashboardEntry.value.authFilesSummary.unavailable;
@@ -361,22 +398,26 @@ const useDashboardData = () => {
         value: successRateText,
       },
       {
-        label: "当前小时请求",
-        note: latestRequestHour.value.label,
-        tone: currentRequest.value > 0 ? "accent" : "neutral",
-        value: formatNumber(currentRequest.value),
+        label: requestHourMetric.value.label,
+        note: requestHourMetric.value.note,
+        tone: requestHourMetric.value.value > 0 ? "accent" : "neutral",
+        value: formatNumber(requestHourMetric.value.value),
       },
       {
-        label: "当前小时 Tokens",
-        note: latestTokenHour.value.label,
-        tone: currentToken.value > 0 ? "warning" : "neutral",
-        value: formatCompactNumber(currentToken.value),
+        label: tokenHourMetric.value.label,
+        note: tokenHourMetric.value.note,
+        tone: tokenHourMetric.value.available && tokenHourMetric.value.value > 0 ? "warning" : "neutral",
+        value: tokenHourMetric.value.available
+          ? formatCompactNumber(tokenHourMetric.value.value)
+          : "--",
       },
       {
-        label: "24 小时 Tokens",
-        note: "最近 24 小时消耗",
-        tone: last24HourTokens.value > 0 ? "accent" : "neutral",
-        value: formatCompactNumber(last24HourTokens.value),
+        label: token24HourMetric.value.label,
+        note: token24HourMetric.value.note,
+        tone: token24HourMetric.value.available && token24HourMetric.value.value > 0 ? "accent" : "neutral",
+        value: token24HourMetric.value.available
+          ? formatCompactNumber(token24HourMetric.value.value)
+          : "--",
       },
       {
         label: "问题账号",
@@ -396,7 +437,7 @@ const useDashboardData = () => {
   const cpaMetrics = computed(() => [
     {
       label: "总请求",
-      note: `今日累计 ${formatNumber(activeDashboardEntry.value.usageSummary.todayRequests)}`,
+      note: request24HourSummaryNote.value,
       tone: "neutral",
       value: formatNumber(activeDashboardEntry.value.usageSummary.totalRequests),
     },
@@ -425,10 +466,12 @@ const useDashboardData = () => {
       value: formatCompactNumber(activeDashboardEntry.value.usageSummary.totalTokens),
     },
     {
-      label: "24 小时 Tokens",
-      note: "最近 24 小时消耗",
-      tone: "warning",
-      value: formatCompactNumber(last24HourTokens.value),
+      label: token24HourMetric.value.label,
+      note: token24HourMetric.value.note,
+      tone: token24HourMetric.value.available ? "warning" : "neutral",
+      value: token24HourMetric.value.available
+        ? formatCompactNumber(token24HourMetric.value.value)
+        : "--",
     },
     {
       label: "模型数",
@@ -437,16 +480,18 @@ const useDashboardData = () => {
       value: formatNumber(activeDashboardEntry.value.usageSummary.modelCount),
     },
     {
-      label: "当前小时请求",
-      note: latestRequestHour.value.label,
+      label: requestHourMetric.value.label,
+      note: requestHourMetric.value.note,
       tone: "accent",
-      value: formatNumber(latestRequestHour.value.value),
+      value: formatNumber(requestHourMetric.value.value),
     },
     {
-      label: "当前小时 Tokens",
-      note: latestTokenHour.value.label,
-      tone: "accent",
-      value: formatCompactNumber(latestTokenHour.value.value),
+      label: tokenHourMetric.value.label,
+      note: tokenHourMetric.value.note,
+      tone: tokenHourMetric.value.available ? "accent" : "neutral",
+      value: tokenHourMetric.value.available
+        ? formatCompactNumber(tokenHourMetric.value.value)
+        : "--",
     },
   ]);
 
@@ -512,22 +557,22 @@ const useDashboardData = () => {
   });
 
   const requestMonitorSummary = computed(() => {
-    const currentHour = requestMonitorTimeline.value.at(-1) || { value: 0 };
+    const focusHour = requestHourMetric.value;
 
     return {
-      label: `当前 ${formatNumber(currentHour.value)}`,
-      note: `今日总请求 ${formatNumber(activeDashboardEntry.value.usageSummary.todayRequests)} 次。`,
-      tone: currentHour.value > 0 ? "accent" : "neutral",
+      label: `当前 ${formatNumber(focusHour.value)}`,
+      note: request24HourSummaryNote.value,
+      tone: focusHour.value > 0 ? "accent" : "neutral",
     };
   });
 
   const tokenMonitorSummary = computed(() => {
-    const currentHour = tokenMonitorTimeline.value.at(-1) || { value: 0 };
+    const focusHour = tokenHourMetric.value;
 
     return {
-      label: `当前 ${formatCompactNumber(currentHour.value)}`,
-      note: `今日总 Token 消耗 ${formatCompactNumber(activeDashboardEntry.value.usageSummary.todayTokens)}。`,
-      tone: currentHour.value > 0 ? "warning" : "neutral",
+      label: focusHour.available ? `当前 ${formatCompactNumber(focusHour.value)}` : "--",
+      note: token24HourMetric.value.note,
+      tone: focusHour.available && focusHour.value > 0 ? "warning" : "neutral",
     };
   });
 
