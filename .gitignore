@@ -8,3 +8,9 @@ dist/
 *.crx
 *.pem
 *.zip
+
+# docs
+docs/
+
+# tests
+tests/

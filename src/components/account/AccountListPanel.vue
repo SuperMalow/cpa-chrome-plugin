@@ -14,10 +14,7 @@
         <div class="flex shrink-0 items-center justify-start gap-2 sm:justify-end">
           <button
             class="inline-flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-slate-200 bg-white/84 text-slate-500 transition hover:border-slate-300 hover:bg-white hover:text-slate-700 hover:shadow-[0_10px_20px_rgba(112,136,181,0.1)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-900/84 dark:hover:text-slate-100 dark:hover:shadow-[0_10px_20px_rgba(2,6,23,0.24)]"
-            type="button"
-            :disabled="busy || refreshing"
-            @click="handleRefresh"
-          >
+            type="button" :disabled="busy || refreshing" @click="handleRefresh">
             <RefreshRight :class="['h-3.5 w-3.5', refreshing ? 'animate-spin' : '']" />
           </button>
 
@@ -72,8 +69,8 @@
         <div
           class="flex min-h-8 items-center rounded-full border border-white/65 bg-white/72 px-3.5 shadow-sm transition focus-within:border-blue-300 focus-within:bg-white dark:border-slate-700/70 dark:bg-slate-950/46 dark:focus-within:border-sky-400 dark:focus-within:bg-slate-950/66">
           <select :value="statusFilter"
-            class="w-full bg-transparent text-[12px] text-slate-700 outline-none dark:text-slate-100"
-            :disabled="busy" @change="statusFilter = $event.target.value">
+            class="w-full bg-transparent text-[12px] text-slate-700 outline-none dark:text-slate-100" :disabled="busy"
+            @change="statusFilter = $event.target.value">
             <option value="all">全部状态</option>
             <option value="active">活跃</option>
             <option value="disabled">已停用</option>
@@ -88,8 +85,8 @@
         <div
           class="flex min-h-8 items-center rounded-full border border-white/65 bg-white/72 px-3.5 shadow-sm transition focus-within:border-blue-300 focus-within:bg-white dark:border-slate-700/70 dark:bg-slate-950/46 dark:focus-within:border-sky-400 dark:focus-within:bg-slate-950/66">
           <select :value="enabledFilter"
-            class="w-full bg-transparent text-[12px] text-slate-700 outline-none dark:text-slate-100"
-            :disabled="busy" @change="enabledFilter = $event.target.value">
+            class="w-full bg-transparent text-[12px] text-slate-700 outline-none dark:text-slate-100" :disabled="busy"
+            @change="enabledFilter = $event.target.value">
             <option value="all">全部</option>
             <option value="enabled">已启用</option>
             <option value="disabled">已停用</option>
@@ -104,8 +101,8 @@
         <div
           class="flex min-h-8 items-center rounded-full border border-white/65 bg-white/72 px-3.5 shadow-sm transition focus-within:border-blue-300 focus-within:bg-white dark:border-slate-700/70 dark:bg-slate-950/46 dark:focus-within:border-sky-400 dark:focus-within:bg-slate-950/66">
           <select :value="String(pageSize)"
-            class="w-full bg-transparent text-[12px] text-slate-700 outline-none dark:text-slate-100"
-            :disabled="busy" @change="handlePageSizeChange">
+            class="w-full bg-transparent text-[12px] text-slate-700 outline-none dark:text-slate-100" :disabled="busy"
+            @change="handlePageSizeChange">
             <option v-for="size in pageSizeOptions" :key="size" :value="String(size)">
               {{ size }} 条
             </option>
@@ -158,15 +155,31 @@
       </div>
     </div>
 
-    <div class="mt-3 flex flex-wrap items-center gap-2 text-xs">
-      <button v-for="action in paginationActions" :key="action.key" :class="[
-        'inline-flex h-7 items-center rounded-full border px-3 text-xs font-semibold transition',
-        action.active
-          ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-sky-700/70 dark:bg-sky-500/18 dark:text-sky-300'
-          : 'border-slate-200 bg-white/84 text-slate-600 hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_rgba(112,136,181,0.1)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-900/84 dark:hover:shadow-[0_10px_20px_rgba(2,6,23,0.24)]',
-      ]" type="button" :disabled="busy || action.disabled" @click="action.handler">
-        <span class="text-xs">{{ action.label }}</span>
-      </button>
+    <div class="mt-3 flex flex-col gap-2 text-xs xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex flex-wrap items-center gap-2">
+        <button v-for="action in paginationActions" :key="action.key" :class="[
+          'inline-flex h-7 items-center rounded-full border px-3 text-xs font-semibold transition',
+          action.active
+            ? 'border-blue-200 bg-blue-50 text-blue-600 dark:border-sky-700/70 dark:bg-sky-500/18 dark:text-sky-300'
+            : 'border-slate-200 bg-white/84 text-slate-600 hover:border-slate-300 hover:bg-white hover:shadow-[0_10px_20px_rgba(112,136,181,0.1)] disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-700/70 dark:bg-slate-900/70 dark:text-slate-300 dark:hover:border-slate-600 dark:hover:bg-slate-900/84 dark:hover:shadow-[0_10px_20px_rgba(2,6,23,0.24)]',
+        ]" type="button" :disabled="busy || action.disabled" @click="action.handler">
+          <span class="text-xs">{{ action.label }}</span>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 xl:justify-end">
+        <button
+          class="inline-flex h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:border-amber-800 dark:hover:bg-amber-950/70 cursor-pointer"
+          type="button" :disabled="busy || refreshing" @click="emit('disable-usage-limit-items')">
+          <span class="text-xs">停用超额账号</span>
+        </button>
+
+        <button
+          class="inline-flex h-7 items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/70 cursor-pointer"
+          type="button" :disabled="busy || refreshing" @click="emit('enable-stale-disabled-items')">
+          <span class="text-xs">恢复超额账号</span>
+        </button>
+      </div>
     </div>
 
     <div
@@ -193,8 +206,7 @@
 
         <tbody v-if="pagedItems.length">
           <AccountTableRow v-for="item in pagedItems" :key="item.id" :item="item" :selected="selectedIdSet.has(item.id)"
-            :busy="busy"
-            @toggle="toggleItemSelection" @disable="emit('disable-items', [$event])"
+            :busy="busy" @toggle="toggleItemSelection" @disable="emit('disable-items', [$event])"
             @enable="emit('enable-items', [$event])" @remove="emit('remove-items', [$event])" />
         </tbody>
 
@@ -220,6 +232,8 @@ const emit = defineEmits([
   "enable-items",
   "remove-items",
   "refresh",
+  "disable-usage-limit-items",
+  "enable-stale-disabled-items",
 ]);
 
 const props = defineProps({

@@ -80,6 +80,8 @@
         :selection-version="selectionVersion"
         @disable-items="handleSetAccountsDisabled($event, true)"
         @enable-items="handleSetAccountsDisabled($event, false)"
+        @disable-usage-limit-items="handleDisableUsageLimitItems"
+        @enable-stale-disabled-items="handleEnableStaleDisabledItems"
         @remove-items="handleRemoveAccounts"
         @refresh="refreshAccounts({ showToast: true })"
       />
@@ -96,13 +98,17 @@
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { ArrowLeft, RefreshRight } from "@element-plus/icons-vue";
-import { ElMessageBox } from "element-plus";
+import { ElMessage, ElMessageBox } from "element-plus";
 import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
 import AccountListPanel from "@/components/account/AccountListPanel.vue";
 import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
 import DashboardHero from "@/components/dashboard/DashboardHero.vue";
 import SettingsSummaryCard from "@/components/settings/SettingsSummaryCard.vue";
 import { useAccountManagementData } from "@/composables/useAccountManagementData";
+import {
+  findDisabledAccountIdsOlderThanDays,
+  findUsageLimitReachedAccountIds,
+} from "@/utils/accountBulkActions";
 
 const router = useRouter();
 const selectionVersion = ref(0);
@@ -162,6 +168,28 @@ const handleSetAccountsDisabled = async (ids, disabled) => {
 
   resetSelection();
   await refreshAccounts();
+};
+
+const handleDisableUsageLimitItems = async () => {
+  const ids = findUsageLimitReachedAccountIds(accountItems.value);
+
+  if (!ids.length) {
+    ElMessage.info("当前没有错误原因为 usage_limit_reached 的可停用账号");
+    return;
+  }
+
+  await handleSetAccountsDisabled(ids, true);
+};
+
+const handleEnableStaleDisabledItems = async () => {
+  const ids = findDisabledAccountIdsOlderThanDays(accountItems.value, 7);
+
+  if (!ids.length) {
+    ElMessage.info("当前没有停用超过 7 天的账号需要启用");
+    return;
+  }
+
+  await handleSetAccountsDisabled(ids, false);
 };
 
 const handleRemoveAccounts = async (ids) => {
