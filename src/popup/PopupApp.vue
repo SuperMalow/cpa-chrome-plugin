@@ -185,6 +185,12 @@ const metricToneClassMap = {
   accent: "border-blue-100 bg-blue-50/88 dark:border-sky-900/60 dark:bg-sky-950/52",
   warning: "border-amber-100 bg-amber-50/88 dark:border-amber-900/60 dark:bg-amber-950/52",
   danger: "border-rose-100 bg-rose-50/88 dark:border-rose-900/60 dark:bg-rose-950/52",
+  critical: "border-red-200 bg-red-50/88 dark:border-red-900/60 dark:bg-red-950/52",
+  "high-risk": "border-red-100 bg-red-50/88 dark:border-red-900/60 dark:bg-red-950/52",
+  attention: "border-orange-100 bg-orange-50/88 dark:border-orange-900/60 dark:bg-orange-950/52",
+  caution: "border-yellow-100 bg-yellow-50/88 dark:border-yellow-900/60 dark:bg-yellow-950/52",
+  good: "border-lime-100 bg-lime-50/88 dark:border-lime-900/60 dark:bg-lime-950/52",
+  excellent: "border-green-100 bg-green-50/88 dark:border-green-900/60 dark:bg-green-950/52",
 };
 
 const metricValueClassMap = {
@@ -193,6 +199,12 @@ const metricValueClassMap = {
   accent: "text-blue-600 dark:text-sky-300",
   warning: "text-amber-600 dark:text-amber-300",
   danger: "text-rose-500 dark:text-rose-300",
+  critical: "text-red-800 dark:text-red-300",
+  "high-risk": "text-red-600 dark:text-red-300",
+  attention: "text-orange-600 dark:text-orange-300",
+  caution: "text-yellow-700 dark:text-yellow-300",
+  good: "text-lime-600 dark:text-lime-300",
+  excellent: "text-green-800 dark:text-green-300",
 };
 
 const quickEntries = [

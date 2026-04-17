@@ -19,9 +19,12 @@
     >
       <template #summary="{ activeItem }">
         <DashboardTimelineDetailCard
+          :class="SERVICE_HEALTH_SUMMARY_CARD_CLASS"
           :eyebrow="activeItem?.isCurrent ? '当前成功率' : '悬浮时段'"
           :primary="activeItem?.total ? activeItem.successRateText : '--'"
+          :row-item-class="SERVICE_HEALTH_SUMMARY_ROW_CLASS"
           :rows="buildSummaryRows(activeItem)"
+          :rows-wrap-class="SERVICE_HEALTH_SUMMARY_ROWS_CLASS"
           :secondary="activeItem?.label || '暂无请求明细'"
           :tone="resolveCardTone(activeItem)"
         />
@@ -37,6 +40,12 @@
 <script setup>
 import DashboardTimelineBars from "@/components/dashboard/DashboardTimelineBars.vue";
 import DashboardTimelineDetailCard from "@/components/dashboard/DashboardTimelineDetailCard.vue";
+import {
+  SERVICE_HEALTH_SUMMARY_CARD_CLASS,
+  SERVICE_HEALTH_SUMMARY_ROW_CLASS,
+  SERVICE_HEALTH_SUMMARY_ROWS_CLASS,
+  SERVICE_HEALTH_SUMMARY_STATUS_ROW_CLASS,
+} from "@/utils/dashboardTimelineLayout";
 
 defineProps({
   items: {
@@ -53,69 +62,89 @@ defineProps({
   },
 });
 
+const toneBarClassMap = {
+  neutral: {
+    base: "bg-slate-300/90 dark:bg-slate-700/90",
+    current: "bg-slate-300 ring-1 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500/60",
+  },
+  critical: {
+    base: "bg-red-800",
+    current: "bg-red-800 ring-1 ring-red-200/80",
+  },
+  "high-risk": {
+    base: "bg-red-600",
+    current: "bg-red-600 ring-1 ring-red-200/70",
+  },
+  attention: {
+    base: "bg-orange-600",
+    current: "bg-orange-600 ring-1 ring-orange-200/70",
+  },
+  caution: {
+    base: "bg-yellow-700",
+    current: "bg-yellow-700 ring-1 ring-yellow-200/70",
+  },
+  good: {
+    base: "bg-lime-600",
+    current: "bg-lime-600 ring-1 ring-lime-200/70",
+  },
+  excellent: {
+    base: "bg-green-800",
+    current: "bg-green-800 ring-1 ring-green-200/80",
+  },
+};
+
+const statusDotClassMap = {
+  neutral: "bg-slate-400/70 dark:bg-slate-500",
+  critical: "bg-red-800",
+  "high-risk": "bg-red-600",
+  attention: "bg-orange-600",
+  caution: "bg-yellow-700",
+  good: "bg-lime-600",
+  excellent: "bg-green-800",
+};
+
+const statusValueClassMap = {
+  neutral: "font-semibold text-slate-700 dark:text-slate-100",
+  critical: "font-semibold text-red-800 dark:text-red-300",
+  "high-risk": "font-semibold text-red-600 dark:text-red-300",
+  attention: "font-semibold text-orange-600 dark:text-orange-300",
+  caution: "font-semibold text-yellow-700 dark:text-yellow-300",
+  good: "font-semibold text-lime-600 dark:text-lime-300",
+  excellent: "font-semibold text-green-800 dark:text-green-300",
+};
+
+const resolveItemTone = (item) => item?.status?.tone || "neutral";
+
 const resolveBarClass = (item) => {
-  if (item.level === 4) {
-    return item.isCurrent
-      ? "bg-emerald-300 ring-1 ring-emerald-100/70"
-      : "bg-emerald-300";
-  }
+  const toneMeta = toneBarClassMap[resolveItemTone(item)] || toneBarClassMap.neutral;
 
-  if (item.level === 3) {
-    return item.isCurrent
-      ? "bg-emerald-400/85 ring-1 ring-emerald-100/70"
-      : "bg-emerald-400/85";
-  }
-
-  if (item.level === 2) {
-    return item.isCurrent
-      ? "bg-amber-300/85 ring-1 ring-amber-100/60"
-      : "bg-amber-300/85";
-  }
-
-  if (item.level === 1) {
-    return item.isCurrent
-      ? "bg-rose-400/90 ring-1 ring-rose-100/60"
-      : "bg-rose-400/90";
-  }
-
-  return item.isCurrent
-    ? "bg-slate-300 ring-1 ring-slate-200 dark:bg-slate-700 dark:ring-slate-500/60"
-    : "bg-slate-300/90 dark:bg-slate-700/90";
+  return item.isCurrent ? toneMeta.current : toneMeta.base;
 };
 
 const resolveBarAriaLabel = (item) =>
   item?.total
-    ? `${item.label}，成功 ${item.success} 次，失败 ${item.failed} 次，成功率 ${item.successRateText}`
+    ? `${item.label}，成功 ${item.success} 次，失败 ${item.failed} 次，成功率 ${item.successRateText}，状态 ${item.status?.label || "暂无数据"}`
     : `${item.label}，暂无请求`;
 
-const resolveCardTone = (item) => {
-  if (!item?.total) {
-    return "neutral";
-  }
-
-  if (item.successRate >= 0.99) {
-    return "success";
-  }
-
-  if (item.successRate >= 0.95) {
-    return "accent";
-  }
-
-  if (item.successRate >= 0.85) {
-    return "warning";
-  }
-
-  return "danger";
-};
+const resolveCardTone = (item) => resolveItemTone(item);
 
 const buildSummaryRows = (item) => [
   {
+    className: `${SERVICE_HEALTH_SUMMARY_ROW_CLASS} ${SERVICE_HEALTH_SUMMARY_STATUS_ROW_CLASS}`,
+    dotClass: statusDotClassMap[resolveItemTone(item)] || statusDotClassMap.neutral,
+    label: "状态",
+    value: item?.status?.label || "暂无数据",
+    valueClass: statusValueClassMap[resolveItemTone(item)] || statusValueClassMap.neutral,
+  },
+  {
+    className: SERVICE_HEALTH_SUMMARY_ROW_CLASS,
     dotClass: "bg-emerald-400",
     label: "成功",
     value: `${item?.success || 0} 次`,
     valueClass: "font-semibold text-emerald-600 dark:text-emerald-300",
   },
   {
+    className: SERVICE_HEALTH_SUMMARY_ROW_CLASS,
     dotClass: "bg-rose-400",
     label: "失败",
     value: `${item?.failed || 0} 次`,

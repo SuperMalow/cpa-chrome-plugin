@@ -1,3 +1,5 @@
+import { resolveSuccessRateStatus } from "@/utils/successRateStatus";
+
 const numberFormatter = new Intl.NumberFormat("zh-CN");
 const compactNumberFormatter = new Intl.NumberFormat("en-US", {
   notation: "compact",
@@ -102,26 +104,6 @@ const resolveHealthLevel = (value, peakValue) => {
   }
 
   if (ratio >= 0.3) {
-    return 2;
-  }
-
-  return 1;
-};
-
-const resolveSuccessRateLevel = (successRate, total) => {
-  if (!total) {
-    return 0;
-  }
-
-  if (successRate >= 0.99) {
-    return 4;
-  }
-
-  if (successRate >= 0.95) {
-    return 3;
-  }
-
-  if (successRate >= 0.85) {
     return 2;
   }
 
@@ -379,14 +361,16 @@ const buildServiceHealthTimeline = (
 
   const timeline = slots.map((slot) => {
     const successRate = slot.total > 0 ? slot.success / slot.total : 0;
+    const status = resolveSuccessRateStatus(successRate, slot.total);
 
     return {
       ...slot,
-      level: resolveSuccessRateLevel(successRate, slot.total),
+      level: status.level,
+      status,
       successRate,
       successRateText: slot.total > 0 ? formatPercent(slot.success, slot.total) : "--",
       tooltip: slot.total > 0
-        ? `${slot.label} · 成功 ${slot.success}/${slot.total} · 成功率 ${formatPercent(slot.success, slot.total)}`
+        ? `${slot.label} · 成功 ${slot.success}/${slot.total} · 成功率 ${formatPercent(slot.success, slot.total)} · ${status.label}`
         : `${slot.label} · 暂无请求`,
     };
   });

@@ -19,6 +19,7 @@ import {
   normalizeUsageSummary,
   resolveDashboardErrorMessage,
 } from "@/utils/dashboardData";
+import { resolveSuccessRateStatus } from "@/utils/successRateStatus";
 
 const createDashboardEntry = () => ({
   authFilesSummary: createEmptyAuthFilesSummary(),
@@ -47,26 +48,6 @@ const resolveDefaultConfigId = (configs = []) => {
     || null;
 
   return preferredConfig?.id || "";
-};
-
-const resolveSuccessRateTone = (successRate, total) => {
-  if (!total) {
-    return "neutral";
-  }
-
-  if (successRate >= 0.99) {
-    return "success";
-  }
-
-  if (successRate >= 0.95) {
-    return "accent";
-  }
-
-  if (successRate >= 0.85) {
-    return "warning";
-  }
-
-  return "danger";
 };
 
 const TOKEN_TIMELINE_UNAVAILABLE_NOTE =
@@ -381,20 +362,20 @@ const useDashboardData = () => {
       : totals.total > 0
         ? totals.successRateText
         : "--";
-    const successRateTone = currentHour?.total
-      ? resolveSuccessRateTone(currentHour.successRate, currentHour.total)
-      : resolveSuccessRateTone(totals.successRate, totals.total);
+    const successRateStatus = currentHour?.total
+      ? resolveSuccessRateStatus(currentHour.successRate, currentHour.total)
+      : resolveSuccessRateStatus(totals.successRate, totals.total);
     const successRateNote = currentHour?.total
-      ? `成功 ${formatNumber(currentHour.success)} / 失败 ${formatNumber(currentHour.failed)}`
+      ? `成功 ${formatNumber(currentHour.success)} / 失败 ${formatNumber(currentHour.failed)} · 状态 ${successRateStatus.label}`
       : totals.total > 0
-        ? `24 小时成功 ${formatNumber(totals.success)} / 失败 ${formatNumber(totals.failed)}`
+        ? `24 小时成功 ${formatNumber(totals.success)} / 失败 ${formatNumber(totals.failed)} · 状态 ${successRateStatus.label}`
         : "最近暂无请求";
 
     return [
       {
         label: "当前成功率",
         note: successRateNote,
-        tone: successRateTone,
+        tone: successRateStatus.tone,
         value: successRateText,
       },
       {
@@ -540,19 +521,23 @@ const useDashboardData = () => {
     }
 
     if (currentHour?.total) {
+      const currentStatus = resolveSuccessRateStatus(currentHour.successRate, currentHour.total);
+
       return {
         label: `当前成功率 ${currentHour.successRateText}`,
-        note: `24 小时累计成功率 ${totals.successRateText}，当前小时成功 ${formatNumber(currentHour.success)} 次，失败 ${formatNumber(currentHour.failed)} 次。`,
-        tone: resolveSuccessRateTone(currentHour.successRate, currentHour.total),
+        note: `24 小时累计成功率 ${totals.successRateText}，当前小时成功 ${formatNumber(currentHour.success)} 次，失败 ${formatNumber(currentHour.failed)} 次，当前状态 ${currentStatus.label}。`,
+        tone: currentStatus.tone,
       };
     }
+
+    const totalsStatus = resolveSuccessRateStatus(totals.successRate, totals.total);
 
     return {
       label: "当前成功率 --",
       note: latestActiveHour
-        ? `当前小时暂无请求，最近活跃小时 ${latestActiveHour.hour}:00 成功率 ${latestActiveHour.successRateText}，24 小时累计成功率 ${totals.successRateText}。`
-        : `当前小时暂无请求，24 小时累计成功率 ${totals.successRateText}。`,
-      tone: resolveSuccessRateTone(totals.successRate, totals.total),
+        ? `当前小时暂无请求，最近活跃小时 ${latestActiveHour.hour}:00 成功率 ${latestActiveHour.successRateText}，24 小时累计成功率 ${totals.successRateText}，当前状态 ${totalsStatus.label}。`
+        : `当前小时暂无请求，24 小时累计成功率 ${totals.successRateText}，当前状态 ${totalsStatus.label}。`,
+      tone: totalsStatus.tone,
     };
   });
 
