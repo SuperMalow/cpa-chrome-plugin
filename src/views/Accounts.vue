@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gradient-to-b from-slate-100 via-blue-50 to-slate-50 px-4 py-8 pb-10 md:px-6 md:py-12 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+  <div class="min-h-screen bg-gradient-to-b from-slate-100 via-blue-50 to-slate-50 px-4 py-8 pb-36 md:px-6 md:py-12 md:pb-44 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
     <DashboardHero
       kicker="认证账号"
       title="账号管理"
@@ -91,6 +91,9 @@
         <span>数据源：{{ dataSourceText }}</span>
       </footer>
     </main>
+
+    <DashboardToolbar :tabs="toolbarTabs" :active-tab="activeTab" :actions="toolbarActions"
+      @select-tab="handleToolbarSelect" @action="handleToolbarAction" />
   </div>
 </template>
 
@@ -103,8 +106,10 @@ import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
 import AccountListPanel from "@/components/account/AccountListPanel.vue";
 import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
 import DashboardHero from "@/components/dashboard/DashboardHero.vue";
+import DashboardToolbar from "@/components/dashboard/DashboardToolbar.vue";
 import SettingsSummaryCard from "@/components/settings/SettingsSummaryCard.vue";
 import { useAccountManagementData } from "@/composables/useAccountManagementData";
+import { useDashboardToolbar } from "@/composables/useDashboardToolbar";
 import {
   findDisabledAccountIdsOlderThanDays,
   findUsageLimitReachedAccountIds,
@@ -128,6 +133,13 @@ const {
   setAccountsDisabled,
   setActiveConfig,
 } = useAccountManagementData();
+const {
+  activeTab,
+  handleToolbarAction,
+  handleToolbarSelect,
+  toolbarActions,
+  toolbarTabs,
+} = useDashboardToolbar();
 
 const resetSelection = () => {
   selectionVersion.value += 1;

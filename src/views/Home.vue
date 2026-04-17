@@ -53,22 +53,21 @@
       <DashboardIconMonitor :request-items="requestMonitorTimeline" :request-summary="requestMonitorSummary"
         :token-items="tokenMonitorTimeline" :token-summary="tokenMonitorSummary" />
 
-      <DashboardToolbar :tabs="focusTabs" :active-tab="activeTab" :actions="quickActions" @select-tab="handleSelectTab"
-        @action="handleAction" />
-
       <footer
         class="mt-5 flex flex-col gap-2 border-t border-slate-200/80 pt-4 text-[13px] text-slate-500 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:text-slate-400">
         <span>最近更新：{{ lastUpdatedText }}</span>
         <span>数据源：{{ dataSourceText }}</span>
       </footer>
     </main>
+
+    <DashboardToolbar :tabs="toolbarTabs" :active-tab="activeTab" :actions="toolbarActions"
+      @select-tab="handleToolbarSelect" @action="handleToolbarAction" />
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
-import { ElIcon, ElMessage } from "element-plus";
+import { computed, onMounted } from "vue";
+import { ElIcon } from "element-plus";
 import { RefreshRight, WarningFilled } from "@element-plus/icons-vue";
 import DashboardConfigTabs from "@/components/dashboard/DashboardConfigTabs.vue";
 import DashboardHealthMonitor from "@/components/dashboard/DashboardHealthMonitor.vue";
@@ -78,21 +77,9 @@ import DashboardMetricSection from "@/components/dashboard/DashboardMetricSectio
 import DashboardStatusPill from "@/components/dashboard/DashboardStatusPill.vue";
 import DashboardToolbar from "@/components/dashboard/DashboardToolbar.vue";
 import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
-import {
-  DASHBOARD_FOCUS_TABS,
-  DASHBOARD_QUICK_ACTIONS,
-} from "@/constants/dashboard";
+import { useDashboardToolbar } from "@/composables/useDashboardToolbar";
 import { useDashboardData } from "@/composables/useDashboardData";
-import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
-import {
-  normalizeExternalUrl,
-  openUrlInNewTab,
-  resolveCpaPanelUrl,
-} from "@/utils/navigationLinks";
 
-const router = useRouter();
-const settingsStore = useCpaSettingsStore();
-const activeTab = ref("CPA 面板");
 const {
   accountMetrics,
   activeConfigId,
@@ -112,6 +99,13 @@ const {
   tokenMonitorSummary,
   tokenMonitorTimeline,
 } = useDashboardData();
+const {
+  activeTab,
+  handleToolbarAction,
+  handleToolbarSelect,
+  toolbarActions,
+  toolbarTabs,
+} = useDashboardToolbar();
 
 const heroActions = computed(() => [
   {
@@ -122,83 +116,10 @@ const heroActions = computed(() => [
   },
 ]);
 
-const focusTabs = DASHBOARD_FOCUS_TABS;
-const quickActions = DASHBOARD_QUICK_ACTIONS;
-const activeConfig = computed(
-  () => settingsStore.configs.find((item) => item.id === activeConfigId.value) || null,
-);
-
-const openExternalLink = (rawUrl, label) => {
-  if (!rawUrl?.trim()) {
-    ElMessage.warning(`请先在设置页填写${label}`);
-    return;
-  }
-
-  try {
-    openUrlInNewTab(normalizeExternalUrl(rawUrl));
-  } catch {
-    ElMessage.warning(`${label}格式不正确，请先在设置页检查`);
-  }
-};
-
-const handleSelectTab = (tab) => {
-  if (tab === "账号") {
-    router.push({ name: "accounts" });
-    return;
-  }
-
-  activeTab.value = tab;
-};
-
-const handleAction = async (action) => {
-  if (action.key === "accounts") {
-    router.push({ name: "accounts" });
-    return;
-  }
-
-  if (action.key === "settings") {
-    router.push({ name: "settings" });
-    return;
-  }
-
+const handleAction = (action) => {
   if (action.key === "refresh") {
     refreshDashboard({ showToast: true });
-    return;
   }
-
-  if (!settingsStore.loaded) {
-    try {
-      await settingsStore.loadSettings();
-    } catch (error) {
-      console.error(error);
-      ElMessage.error("读取设置失败，请稍后重试");
-      return;
-    }
-  }
-
-  if (action.key === "open-cpa") {
-    try {
-      const panelUrl = resolveCpaPanelUrl(activeConfig.value?.baseUrl);
-
-      if (!panelUrl) {
-        ElMessage.warning("请先在设置页填写 CPA 链接");
-        return;
-      }
-
-      openUrlInNewTab(panelUrl);
-    } catch {
-      ElMessage.warning("CPA 链接格式不正确，请先在设置页检查");
-    }
-
-    return;
-  }
-
-  if (action.key === "open-register") {
-    openExternalLink(settingsStore.panelLinks.registerPanelUrl, "注册机面板链接");
-    return;
-  }
-
-  console.log("dashboard action =>", action.label);
 };
 
 onMounted(() => {

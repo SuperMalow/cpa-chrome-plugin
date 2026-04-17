@@ -1,6 +1,6 @@
 <template>
   <div
-    class="min-h-screen bg-gradient-to-b from-slate-100 via-blue-50 to-slate-50 px-4 py-8 md:px-6 md:py-12 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
+    class="min-h-screen bg-gradient-to-b from-slate-100 via-blue-50 to-slate-50 px-4 py-8 pb-36 md:px-6 md:py-12 md:pb-44 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
     <section
       class="mx-auto mb-5 flex w-full max-w-[1180px] flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
       <div>
@@ -152,6 +152,9 @@
         </div>
       </section>
     </main>
+
+    <DashboardToolbar :tabs="toolbarTabs" :active-tab="activeTab" :actions="toolbarActions"
+      @select-tab="handleToolbarSelect" @action="handleToolbarAction" />
   </div>
 </template>
 
@@ -162,15 +165,24 @@ import { ElIcon, ElMessage } from "element-plus";
 import { ArrowLeft, Plus } from "@element-plus/icons-vue";
 import { testCpaManagementConfig } from "@/api/cpaManagement";
 import ThemeToggleButton from "@/components/common/ThemeToggleButton.vue";
+import DashboardToolbar from "@/components/dashboard/DashboardToolbar.vue";
 import CpaConfigSelector from "@/components/settings/CpaConfigSelector.vue";
 import CpaSettingsCard from "@/components/settings/CpaSettingsCard.vue";
 import SettingsSummaryCard from "@/components/settings/SettingsSummaryCard.vue";
+import { useDashboardToolbar } from "@/composables/useDashboardToolbar";
 import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
 
 const router = useRouter();
 const settingsStore = useCpaSettingsStore();
 const activeConfigId = ref("");
 const testingLink = ref(false);
+const {
+  activeTab,
+  handleToolbarAction,
+  handleToolbarSelect,
+  toolbarActions,
+  toolbarTabs,
+} = useDashboardToolbar();
 
 const activeAuthCount = computed(
   () => settingsStore.authSummary.filter((item) => item.count > 0).length,
