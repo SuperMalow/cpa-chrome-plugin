@@ -19,6 +19,7 @@ import {
   normalizeUsageSummary,
   resolveDashboardErrorMessage,
 } from "@/utils/dashboardData";
+import { resolveDashboardRefreshTargets } from "@/utils/dashboardRefreshScope";
 import { resolveSuccessRateStatus } from "@/utils/successRateStatus";
 
 const createDashboardEntry = () => ({
@@ -573,7 +574,7 @@ const useDashboardData = () => {
     return `${activeConfigName.value} / ${activeConfig.value.baseUrl.trim()}`;
   });
 
-  const refreshDashboard = async ({ showToast = false, onlyActive = false } = {}) => {
+  const refreshDashboard = async ({ showToast = false, onlyActive = true } = {}) => {
     await settingsStore.loadSettings();
     syncDashboardEntries(settingsStore.configs);
 
@@ -590,9 +591,11 @@ const useDashboardData = () => {
       activeConfigId.value = resolveDefaultConfigId(settingsStore.configs);
     }
 
-    const targetConfigs = onlyActive
-      ? settingsStore.configs.filter((config) => config.id === activeConfigId.value)
-      : settingsStore.configs;
+    const targetConfigs = resolveDashboardRefreshTargets(
+      settingsStore.configs,
+      activeConfigId.value,
+      { onlyActive },
+    );
     const results = await Promise.all(
       targetConfigs.map((config) => refreshConfigDashboard(config)),
     );

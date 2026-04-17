@@ -118,11 +118,11 @@ const heroActions = computed(() => [
 
 const handleAction = (action) => {
   if (action.key === "refresh") {
-    refreshDashboard({ showToast: true });
+    refreshDashboard({ onlyActive: true, showToast: true });
   }
 };
 
 onMounted(() => {
-  refreshDashboard();
+  refreshDashboard({ onlyActive: true });
 });
 </script>
