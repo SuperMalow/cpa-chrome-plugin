@@ -1,7 +1,7 @@
 {
   "name": "browerplugins",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "一个系统面板聚合chrome插件",
   "author": "shengwen",
   "license": "Apache-2.0",
