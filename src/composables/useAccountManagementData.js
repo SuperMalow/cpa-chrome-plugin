@@ -386,7 +386,7 @@ export const useAccountManagementData = () => {
   };
 
   const refreshAccounts = async ({ showToast = false } = {}) => {
-    await settingsStore.loadSettings();
+    await settingsStore.loadSettings({ force: true });
     syncAccountEntries(settingsStore.configs);
 
     if (!settingsStore.configs.length) {

@@ -23,11 +23,14 @@ import { resolveDashboardRefreshTargets } from "@/utils/dashboardRefreshScope";
 import { resolveSuccessRateStatus } from "@/utils/successRateStatus";
 
 const createDashboardEntry = () => ({
+  authFilesLoaded: false,
   authFilesSummary: createEmptyAuthFilesSummary(),
+  configFingerprint: "",
   error: "",
   lastUpdatedAt: "",
   loaded: false,
   loading: false,
+  usageLoaded: false,
   usageSummary: createEmptyUsageSummary(),
 });
 
@@ -36,6 +39,16 @@ const isConfigReady = (config) =>
 
 const hasEntryData = (entry) =>
   entry?.authFilesSummary?.total > 0 || entry?.usageSummary?.totalRequests > 0;
+
+const hasDashboardSnapshot = (entry) =>
+  Boolean(entry?.authFilesLoaded || entry?.usageLoaded || hasEntryData(entry));
+
+const createDashboardConfigFingerprint = (config) => JSON.stringify([
+  config?.baseUrl?.trim() || "",
+  config?.apiKey?.trim() || "",
+  config?.authType || "",
+  Number(config?.timeoutSeconds) || 30,
+]);
 
 const resolveConfigLabel = (config, index) =>
   config?.name?.trim() || `CPA 接入 ${String(index + 1).padStart(2, "0")}`;
@@ -84,11 +97,14 @@ const useDashboardData = () => {
   const resetDashboardEntry = (configId) => {
     const entry = getDashboardEntry(configId);
 
+    entry.authFilesLoaded = false;
     entry.authFilesSummary = createEmptyAuthFilesSummary();
+    entry.configFingerprint = "";
     entry.error = "";
     entry.lastUpdatedAt = "";
     entry.loaded = false;
     entry.loading = false;
+    entry.usageLoaded = false;
     entry.usageSummary = createEmptyUsageSummary();
   };
 
@@ -113,7 +129,7 @@ const useDashboardData = () => {
     settingsStore.configs.map((config, index) => {
       const entry = dashboardEntries.value[config.id] || createDashboardEntry();
       const ready = isConfigReady(config);
-      const hasData = hasEntryData(entry);
+      const hasSnapshot = hasDashboardSnapshot(entry);
 
       let status = "待同步";
       let tone = "neutral";
@@ -127,7 +143,7 @@ const useDashboardData = () => {
       } else if (entry.error) {
         status = "异常";
         tone = "danger";
-      } else if (hasData) {
+      } else if (hasSnapshot) {
         status = "已同步";
         tone = "success";
       }
@@ -234,23 +250,54 @@ const useDashboardData = () => {
       };
     }
 
+    const configFingerprint = createDashboardConfigFingerprint(config);
+
+    if (entry.configFingerprint && entry.configFingerprint !== configFingerprint) {
+      resetDashboardEntry(config.id);
+    }
+
     entry.loading = true;
     entry.error = "";
+    entry.configFingerprint = configFingerprint;
 
     try {
-      const [authFilesResponse, usageResponse] = await Promise.all([
+      const [authFilesResult, usageResult] = await Promise.allSettled([
         fetchCpaManagementAuthFiles(config),
         fetchCpaManagementUsage(config),
       ]);
+      const errors = [];
 
-      entry.authFilesSummary = normalizeAuthFilesSummary(authFilesResponse.data);
+      if (authFilesResult.status === "fulfilled") {
+        entry.authFilesLoaded = true;
+        entry.authFilesSummary = normalizeAuthFilesSummary(authFilesResult.value.data);
+      } else {
+        errors.push(authFilesResult.reason);
+      }
+
+      if (usageResult.status === "fulfilled") {
+        entry.usageLoaded = true;
+        entry.usageSummary = normalizeUsageSummary(usageResult.value.data);
+      } else {
+        errors.push(usageResult.reason);
+      }
+
       entry.lastUpdatedAt = new Date().toISOString();
       entry.loaded = true;
-      entry.usageSummary = normalizeUsageSummary(usageResponse.data);
+
+      if (errors.length === 2) {
+        entry.error = resolveDashboardErrorMessage(errors[0]);
+
+        return {
+          configId: config.id,
+          message: entry.error,
+          status: "error",
+        };
+      }
 
       return {
         configId: config.id,
-        status: "success",
+        message: errors.length ? resolveDashboardErrorMessage(errors[0]) : "",
+        status: errors.length ? "partial" : "success",
       };
     } catch (error) {
       console.error(error);
@@ -277,7 +324,14 @@ const useDashboardData = () => {
     const config = settingsStore.configs.find((item) => item.id === configId);
     const entry = getDashboardEntry(configId);
 
-    if (config && isConfigReady(config) && !entry.loaded && !entry.loading) {
+    const configFingerprint = config ? createDashboardConfigFingerprint(config) : "";
+
+    if (
+      config
+      && isConfigReady(config)
+      && !entry.loading
+      && (!entry.loaded || entry.configFingerprint !== configFingerprint)
+    ) {
       void refreshConfigDashboard(config);
     }
   };
@@ -575,7 +629,7 @@ const useDashboardData = () => {
   });
 
   const refreshDashboard = async ({ showToast = false, onlyActive = true } = {}) => {
-    await settingsStore.loadSettings();
+    await settingsStore.loadSettings({ force: true });
     syncDashboardEntries(settingsStore.configs);
 
     if (!settingsStore.configs.length) {
@@ -605,11 +659,18 @@ const useDashboardData = () => {
     }
 
     const successCount = results.filter((item) => item.status === "success").length;
+    const partialCount = results.filter((item) => item.status === "partial").length;
     const errorCount = results.filter((item) => item.status === "error").length;
     const skippedCount = results.filter((item) => item.status === "skipped").length;
+    const refreshedCount = successCount + partialCount;
 
-    if (successCount > 0 && errorCount === 0 && skippedCount === 0) {
+    if (successCount > 0 && partialCount === 0 && errorCount === 0 && skippedCount === 0) {
       ElMessage.success(`已刷新 ${successCount} 个配置`);
+      return;
+    }
+
+    if (refreshedCount > 0 && errorCount === 0 && skippedCount === 0) {
+      ElMessage.warning(`已刷新 ${refreshedCount} 个配置，其中 ${partialCount} 个配置部分数据未返回`);
       return;
     }
 
@@ -619,7 +680,7 @@ const useDashboardData = () => {
     }
 
     ElMessage.warning(
-      `已刷新 ${successCount} 个配置，异常 ${errorCount} 个，待配置 ${skippedCount} 个`,
+      `已刷新 ${refreshedCount} 个配置，部分 ${partialCount} 个，异常 ${errorCount} 个，待配置 ${skippedCount} 个`,
     );
   };
 

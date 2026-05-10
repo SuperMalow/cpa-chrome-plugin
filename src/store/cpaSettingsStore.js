@@ -52,8 +52,10 @@ export const useCpaSettingsStore = defineStore("cpaSettings", {
     },
   },
   actions: {
-    async loadSettings() {
-      if (this.loaded) {
+    async loadSettings(options = {}) {
+      const force = typeof options === "boolean" ? options : Boolean(options?.force);
+
+      if (this.loaded && (!force || this.dirty || this.saving)) {
         return;
       }
 
