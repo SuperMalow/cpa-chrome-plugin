@@ -18,14 +18,6 @@
             <RefreshRight :class="['h-3.5 w-3.5', refreshing ? 'animate-spin' : '']" />
           </button>
 
-          <button
-            class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 text-[11px] font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-800/70 dark:bg-sky-500/16 dark:text-sky-300 dark:hover:border-sky-700 dark:hover:bg-sky-500/22"
-            type="button" :disabled="busy || refreshing || quotaRefreshing || !pagedItems.length"
-            @click="handleRefreshQuotas">
-            <RefreshRight :class="['h-3.5 w-3.5', quotaRefreshing ? 'animate-spin' : '']" />
-            <span class="whitespace-nowrap">{{ quotaRefreshing ? "额度刷新中" : "刷新额度" }}</span>
-          </button>
-
           <span
             class="inline-flex min-h-8 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-600 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300">
             问题 {{ issueCount }}
@@ -176,6 +168,14 @@
       </div>
 
       <div class="flex flex-wrap items-center gap-2 xl:justify-end">
+        <button
+          class="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-800/70 dark:bg-sky-500/16 dark:text-sky-300 dark:hover:border-sky-700 dark:hover:bg-sky-500/22"
+          type="button" :disabled="busy || refreshing || quotaRefreshing || !pagedItems.length"
+          @click="handleRefreshQuotas">
+          <RefreshRight :class="['h-3.5 w-3.5', quotaRefreshing ? 'animate-spin' : '']" />
+          <span class="whitespace-nowrap">{{ quotaRefreshing ? "额度刷新中" : "刷新额度" }}</span>
+        </button>
+
         <button
           class="inline-flex h-7 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-xs font-semibold text-amber-700 transition hover:border-amber-300 hover:bg-amber-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300 dark:hover:border-amber-800 dark:hover:bg-amber-950/70 cursor-pointer"
           type="button" :disabled="busy || refreshing" @click="emit('disable-usage-limit-items')">
