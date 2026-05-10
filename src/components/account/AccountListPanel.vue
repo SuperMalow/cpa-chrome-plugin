@@ -18,6 +18,14 @@
             <RefreshRight :class="['h-3.5 w-3.5', refreshing ? 'animate-spin' : '']" />
           </button>
 
+          <button
+            class="inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 text-[11px] font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-800/70 dark:bg-sky-500/16 dark:text-sky-300 dark:hover:border-sky-700 dark:hover:bg-sky-500/22"
+            type="button" :disabled="busy || refreshing || quotaRefreshing || !pagedItems.length"
+            @click="handleRefreshQuotas">
+            <RefreshRight :class="['h-3.5 w-3.5', quotaRefreshing ? 'animate-spin' : '']" />
+            <span class="whitespace-nowrap">{{ quotaRefreshing ? "额度刷新中" : "刷新额度" }}</span>
+          </button>
+
           <span
             class="inline-flex min-h-8 items-center rounded-full border border-amber-200 bg-amber-50 px-3 text-[11px] font-semibold text-amber-600 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300">
             问题 {{ issueCount }}
@@ -197,6 +205,7 @@
             </th>
             <th class="px-4 py-4">文件</th>
             <th class="px-4 py-4">状态</th>
+            <th class="px-4 py-4">额度</th>
             <th class="px-4 py-4">提供方</th>
             <th class="px-4 py-4">账号</th>
             <th class="px-4 py-4">更新时间</th>
@@ -206,13 +215,14 @@
 
         <tbody v-if="pagedItems.length">
           <AccountTableRow v-for="item in pagedItems" :key="item.id" :item="item" :selected="selectedIdSet.has(item.id)"
-            :busy="busy" @toggle="toggleItemSelection" @disable="emit('disable-items', [$event])"
-            @enable="emit('enable-items', [$event])" @remove="emit('remove-items', [$event])" />
+            :busy="busy" :quota-refreshing="quotaRefreshing" @toggle="toggleItemSelection"
+            @disable="emit('disable-items', [$event])" @enable="emit('enable-items', [$event])"
+            @remove="emit('remove-items', [$event])" @refresh-quota="emit('refresh-quotas', [$event])" />
         </tbody>
 
         <tbody v-else>
           <tr>
-            <td colspan="7" class="px-4 py-10 text-center text-xs text-slate-500 dark:text-slate-400">
+            <td colspan="8" class="px-4 py-10 text-center text-xs text-slate-500 dark:text-slate-400">
               当前筛选条件下没有匹配的账号记录。
             </td>
           </tr>
@@ -232,6 +242,7 @@ const emit = defineEmits([
   "enable-items",
   "remove-items",
   "refresh",
+  "refresh-quotas",
   "disable-usage-limit-items",
   "enable-stale-disabled-items",
 ]);
@@ -246,6 +257,10 @@ const props = defineProps({
     default: false,
   },
   refreshing: {
+    type: Boolean,
+    default: false,
+  },
+  quotaRefreshing: {
     type: Boolean,
     default: false,
   },
@@ -552,5 +567,13 @@ const handleRefresh = () => {
   }
 
   emit("refresh");
+};
+
+const handleRefreshQuotas = () => {
+  if (props.busy || props.refreshing || props.quotaRefreshing || !pagedItems.value.length) {
+    return;
+  }
+
+  emit("refresh-quotas", [...pagedItems.value]);
 };
 </script>

@@ -40,6 +40,53 @@
     </td>
 
     <td class="px-4 py-4 align-top">
+      <div class="min-w-[150px]">
+        <template v-if="quotaVisible">
+          <div class="max-w-[190px] space-y-2">
+            <div
+              v-for="line in quotaLineItems"
+              :key="line.key"
+              :class="line.textClass"
+            >
+              <div :class="['flex items-center gap-2', line.label ? 'justify-between' : 'justify-start']">
+                <span
+                  v-if="line.label"
+                  class="shrink-0 text-[11px] font-semibold text-slate-500 dark:text-slate-400"
+                >
+                  {{ line.label }}
+                </span>
+                <div class="flex min-w-0 items-center gap-1.5">
+                  <RefreshRight v-if="line.loading" class="h-3.5 w-3.5 animate-spin" />
+                  <span class="truncate text-[13px] font-bold leading-none tabular-nums">
+                    {{ line.value }}
+                  </span>
+                </div>
+              </div>
+              <div :class="['mt-2 h-1.5 overflow-hidden rounded-full', line.trackClass]">
+                <div
+                  :class="['h-full rounded-full transition-all duration-300', line.barClass]"
+                  :style="{ width: line.width }"
+                />
+              </div>
+              <p class="mt-1.5 max-w-[190px] truncate text-[11px] text-slate-500 dark:text-slate-400">
+                {{ line.note }}
+              </p>
+            </div>
+          </div>
+        </template>
+        <button
+          v-else
+          class="cursor-pointer bg-transparent p-0 text-[12px] font-semibold text-slate-400 underline underline-offset-4 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-300"
+          type="button"
+          :disabled="busy || quotaRefreshing"
+          @click="$emit('refresh-quota', item)"
+        >
+          刷新
+        </button>
+      </div>
+    </td>
+
+    <td class="px-4 py-4 align-top">
       <div class="min-w-[120px]">
         <p class="font-semibold text-slate-700 dark:text-slate-100">
           {{ item.providerLabel }}
@@ -103,8 +150,9 @@
 
 <script setup>
 import { computed } from "vue";
+import { RefreshRight } from "@element-plus/icons-vue";
 
-defineEmits(["toggle", "disable", "enable", "remove"]);
+defineEmits(["toggle", "disable", "enable", "remove", "refresh-quota"]);
 
 const props = defineProps({
   item: {
@@ -119,18 +167,153 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  quotaRefreshing: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const statusClassMap = {
   neutral: "border-slate-200 bg-slate-50 text-slate-500 dark:border-slate-700 dark:bg-slate-900/70 dark:text-slate-300",
+  accent: "border-blue-200 bg-blue-50 text-blue-600 dark:border-sky-700/70 dark:bg-sky-500/18 dark:text-sky-300",
   success: "border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300",
   warning: "border-amber-200 bg-amber-50 text-amber-600 dark:border-amber-900/70 dark:bg-amber-950/50 dark:text-amber-300",
   danger: "border-rose-200 bg-rose-50 text-rose-500 dark:border-rose-900/70 dark:bg-rose-950/50 dark:text-rose-300",
+};
+const quotaClassMap = {
+  neutral: {
+    bar: "bg-slate-400 dark:bg-slate-500",
+    text: "text-slate-600 dark:text-slate-300",
+    track: "bg-slate-200/80 dark:bg-slate-800/80",
+  },
+  accent: {
+    bar: "bg-emerald-400 dark:bg-emerald-300",
+    text: "text-emerald-700 dark:text-emerald-300",
+    track: "bg-emerald-100 dark:bg-emerald-950/70",
+  },
+  success: {
+    bar: "bg-emerald-500 dark:bg-emerald-300",
+    text: "text-emerald-700 dark:text-emerald-300",
+    track: "bg-emerald-100 dark:bg-emerald-950/70",
+  },
+  warning: {
+    bar: "bg-amber-500 dark:bg-amber-300",
+    text: "text-amber-700 dark:text-amber-300",
+    track: "bg-amber-100 dark:bg-amber-950/70",
+  },
+  danger: {
+    bar: "bg-rose-500 dark:bg-rose-300",
+    text: "text-rose-600 dark:text-rose-300",
+    track: "bg-rose-100 dark:bg-rose-950/70",
+  },
 };
 
 const statusClass = computed(
   () => statusClassMap[props.item.statusTone] || statusClassMap.neutral,
 );
+
+const quotaState = computed(() => props.item.quota || {
+  label: "",
+  lines: [],
+  note: "",
+  status: "idle",
+  tone: "neutral",
+  visible: false,
+});
+const quotaVisible = computed(() =>
+  Boolean(quotaState.value.visible || quotaState.value.status === "loading"),
+);
+const quotaClass = computed(
+  () => quotaClassMap[quotaState.value.tone] || quotaClassMap.neutral,
+);
+const resolveQuotaTone = (percent, fallbackTone = "neutral") => {
+  if (percent === null) {
+    return fallbackTone;
+  }
+
+  if (percent >= 70) {
+    return "success";
+  }
+
+  if (percent >= 30) {
+    return "warning";
+  }
+
+  return "danger";
+};
+const quotaPercentValue = computed(() => {
+  const percent = Number(quotaState.value.percent);
+
+  return Number.isFinite(percent)
+    ? Math.min(Math.max(percent, 0), 100)
+    : null;
+});
+const quotaPrimaryText = computed(() => {
+  if (quotaState.value.status === "loading") {
+    return "刷新中";
+  }
+
+  if (quotaPercentValue.value !== null) {
+    return `${Math.round(quotaPercentValue.value)}%`;
+  }
+
+  return quotaState.value.label || "--";
+});
+const quotaProgressWidth = computed(() => {
+  if (quotaState.value.status === "loading") {
+    return "38%";
+  }
+
+  if (quotaPercentValue.value !== null) {
+    return `${quotaPercentValue.value}%`;
+  }
+
+  return quotaState.value.tone === "success" ? "100%" : "0%";
+});
+const quotaLineItems = computed(() => {
+  const sourceLines = Array.isArray(quotaState.value.lines) && quotaState.value.lines.length
+    ? quotaState.value.lines
+    : [
+      {
+        key: "quota",
+        label: "",
+        note: quotaState.value.note,
+        percent: quotaPercentValue.value,
+        tone: quotaState.value.tone,
+        value: quotaPrimaryText.value,
+      },
+    ];
+
+  return sourceLines.map((line, index) => {
+    const percent = Number(line.percent);
+    const normalizedPercent = Number.isFinite(percent)
+      ? Math.min(Math.max(percent, 0), 100)
+      : null;
+    const resolvedTone = resolveQuotaTone(normalizedPercent, line.tone);
+    const lineClass = quotaClassMap[resolvedTone] || quotaClass.value;
+    const loading = quotaState.value.status === "loading" && index === 0;
+
+    return {
+      barClass: lineClass.bar,
+      key: line.key || `quota-${index}`,
+      label: line.label || "",
+      loading,
+      note: line.note || "",
+      textClass: lineClass.text,
+      trackClass: lineClass.track,
+      value: loading
+        ? "刷新中"
+        : normalizedPercent !== null
+          ? `${Math.round(normalizedPercent)}%`
+          : line.value || "--",
+      width: loading
+        ? "38%"
+        : normalizedPercent !== null
+          ? `${normalizedPercent}%`
+          : resolvedTone === "success" ? "100%" : "0%",
+    };
+  });
+});
 
 const statusNote = computed(() => {
   if (props.item.statusMessage) {

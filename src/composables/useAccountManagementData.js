@@ -4,13 +4,17 @@ import {
   deleteCpaManagementAuthFiles,
   fetchCpaManagementAuthFiles,
   patchCpaManagementAuthFileStatus,
+  postCpaManagementApiCall,
 } from "@/api/cpaManagement";
 import { useCpaSettingsStore } from "@/store/cpaSettingsStore";
 import {
+  createAccountQuotaErrorState,
   createEmptyAccountSummary,
+  createLoadingAccountQuotaState,
   formatAccountCount,
   formatAccountDateTime,
   hydrateAccountItem,
+  normalizeAccountQuotaPayload,
   normalizeAuthAccountPayload,
   summarizeAccountItems,
 } from "@/utils/accountManagementData";
@@ -18,6 +22,8 @@ import {
   formatPercent,
   resolveDashboardErrorMessage,
 } from "@/utils/dashboardData";
+
+const ACCOUNT_QUOTA_BATCH_LIMIT = 10;
 
 const createAccountEntry = () => ({
   error: "",
@@ -45,11 +51,25 @@ const resolveDefaultConfigId = (configs = []) => {
   return preferredConfig?.id || "";
 };
 
+const isAccountQuotaRefreshed = (item) =>
+  item?.quota?.status === "success";
+
+const buildAccountQuotaProbePayload = (item) => ({
+  authIndex: item.authIndex,
+  method: "GET",
+  url: "https://chatgpt.com/backend-api/wham/usage",
+  header: {
+    Authorization: "Bearer $TOKEN$",
+    "Content-Type": "application/json",
+  },
+});
+
 export const useAccountManagementData = () => {
   const settingsStore = useCpaSettingsStore();
   const activeConfigId = ref("");
   const accountEntries = ref({});
   const mutatingAccounts = ref(false);
+  const refreshingAccountQuotas = ref(false);
 
   const syncAccountEntries = (configs = []) => {
     const nextEntries = {};
@@ -186,8 +206,16 @@ export const useAccountManagementData = () => {
     try {
       const response = await fetchCpaManagementAuthFiles(config);
       const normalized = normalizeAuthAccountPayload(response.data);
+      const currentQuotaState = new Map(
+        entry.items
+          .map((item) => [item.id, item.quota])
+          .filter(([, quota]) => quota),
+      );
 
-      entry.items = normalized.items;
+      entry.items = normalized.items.map((item) => ({
+        ...item,
+        quota: currentQuotaState.get(item.id) || item.quota,
+      }));
       entry.lastUpdatedAt = new Date().toISOString();
       entry.loaded = true;
       entry.summary = normalized.summary;
@@ -219,6 +247,120 @@ export const useAccountManagementData = () => {
     entry.summary = summarizeAccountItems(nextItems);
     entry.lastUpdatedAt = new Date().toISOString();
     entry.loaded = true;
+  };
+
+  const refreshAccountQuotas = async (sourceItems = []) => {
+    if (refreshingAccountQuotas.value || mutatingAccounts.value) {
+      return false;
+    }
+
+    const targetConfig = activeConfig.value;
+    const targetConfigId = activeConfigId.value;
+    const targetEntry = getAccountEntry(targetConfigId);
+
+    if (!isConfigReady(targetConfig)) {
+      ElMessage.warning("当前接入未完成配置，暂时无法刷新账号额度");
+      return false;
+    }
+
+    const orderedSourceItems = Array.isArray(sourceItems) ? sourceItems : [];
+    const orderedItems = orderedSourceItems.length
+      ? orderedSourceItems
+        .map((sourceItem) => targetEntry.items.find((item) => item.id === sourceItem?.id))
+        .filter(Boolean)
+      : [];
+    const targetItems = orderedItems
+      .filter((item) => !isAccountQuotaRefreshed(item))
+      .slice(0, ACCOUNT_QUOTA_BATCH_LIMIT);
+
+    if (orderedItems.length > ACCOUNT_QUOTA_BATCH_LIMIT && targetItems.length) {
+      ElMessage.warning(
+        `当前最多支持刷新 ${ACCOUNT_QUOTA_BATCH_LIMIT} 个账号，已按当前页顺序选择前 ${ACCOUNT_QUOTA_BATCH_LIMIT} 个未刷新账号`,
+      );
+    }
+
+    if (!targetItems.length) {
+      ElMessage.info("当前页账号额度均已刷新");
+      return false;
+    }
+
+    const targetIds = new Set(targetItems.map((item) => item.id));
+
+    updateAccountItems(targetConfigId, (items) =>
+      items.map((item) => (
+        targetIds.has(item.id)
+          ? {
+            ...item,
+            quota: createLoadingAccountQuotaState(),
+          }
+          : item
+      )),
+    );
+
+    refreshingAccountQuotas.value = true;
+
+    try {
+      const results = await Promise.allSettled(
+        targetItems.map((item) => {
+          if (!item.authIndex) {
+            return Promise.reject(new Error("账号缺少 auth_index，无法查询额度"));
+          }
+
+          return postCpaManagementApiCall(
+            targetConfig,
+            buildAccountQuotaProbePayload(item),
+          );
+        }),
+      );
+      const quotaStateById = new Map();
+      let successCount = 0;
+
+      results.forEach((result, index) => {
+        const targetItem = targetItems[index];
+
+        if (result.status === "fulfilled") {
+          quotaStateById.set(
+            targetItem.id,
+            normalizeAccountQuotaPayload(result.value.data),
+          );
+          successCount += 1;
+          return;
+        }
+
+        quotaStateById.set(
+          targetItem.id,
+          createAccountQuotaErrorState(resolveDashboardErrorMessage(result.reason)),
+        );
+      });
+
+      updateAccountItems(targetConfigId, (items) =>
+        items.map((item) => (
+          quotaStateById.has(item.id)
+            ? {
+              ...item,
+              quota: quotaStateById.get(item.id),
+            }
+            : item
+        )),
+      );
+
+      if (successCount === targetItems.length) {
+        ElMessage.success(`已刷新 ${successCount} 个账号额度`);
+        return true;
+      }
+
+      if (successCount > 0) {
+        ElMessage.warning(
+          `已刷新 ${successCount} 个账号额度，${targetItems.length - successCount} 个读取失败`,
+        );
+        return true;
+      }
+
+      ElMessage.error("账号额度刷新失败");
+      return false;
+    } finally {
+      refreshingAccountQuotas.value = false;
+    }
   };
 
   const setAccountsDisabled = async (ids = [], disabled = true) => {
@@ -452,7 +594,9 @@ export const useAccountManagementData = () => {
     loadingAccounts,
     mutatingAccounts,
     removeAccounts,
+    refreshAccountQuotas,
     refreshAccounts,
+    refreshingAccountQuotas,
     setAccountsDisabled,
     setActiveConfig,
   };

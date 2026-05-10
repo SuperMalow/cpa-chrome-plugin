@@ -3,6 +3,7 @@ import axios from "axios";
 const MANAGEMENT_CONFIG_PATH = "/v0/management/config";
 const MANAGEMENT_AUTH_FILES_PATH = "/v0/management/auth-files";
 const MANAGEMENT_AUTH_FILES_STATUS_PATH = "/v0/management/auth-files/status";
+const MANAGEMENT_API_CALL_PATH = "/v0/management/api-call";
 const MANAGEMENT_USAGE_PATH = "/v0/management/usage";
 
 const resolveManagementUrl = (baseUrl, path = MANAGEMENT_CONFIG_PATH) => {
@@ -82,6 +83,21 @@ const fetchCpaManagementAuthFiles = (config) =>
 const fetchCpaManagementUsage = (config) =>
   axios(createCpaManagementRequestConfig(config, MANAGEMENT_USAGE_PATH));
 
+const postCpaManagementApiCall = (config, payload) =>
+  axios(
+    createCpaManagementRequestConfig(
+      config,
+      MANAGEMENT_API_CALL_PATH,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: payload,
+      },
+    ),
+  );
+
 const patchCpaManagementAuthFileStatus = (config, payload) =>
   axios(
     createCpaManagementRequestConfig(
@@ -119,6 +135,7 @@ export {
   fetchCpaManagementAuthFiles,
   fetchCpaManagementUsage,
   patchCpaManagementAuthFileStatus,
+  postCpaManagementApiCall,
   resolveManagementConfigUrl,
   resolveManagementUrl,
   testCpaManagementConfig,

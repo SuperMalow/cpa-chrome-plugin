@@ -76,6 +76,7 @@
         v-else
         :items="accountItems"
         :busy="mutatingAccounts"
+        :quota-refreshing="refreshingAccountQuotas"
         :refreshing="loadingAccounts"
         :selection-version="selectionVersion"
         @disable-items="handleSetAccountsDisabled($event, true)"
@@ -84,6 +85,7 @@
         @enable-stale-disabled-items="handleEnableStaleDisabledItems"
         @remove-items="handleRemoveAccounts"
         @refresh="refreshAccounts({ showToast: true })"
+        @refresh-quotas="refreshAccountQuotas"
       />
 
       <footer class="flex flex-col gap-2 border-t border-slate-200/80 pt-1 text-[12px] text-slate-500 xl:flex-row xl:items-center xl:justify-between dark:border-slate-800 dark:text-slate-400">
@@ -129,7 +131,9 @@ const {
   loadingAccounts,
   mutatingAccounts,
   removeAccounts,
+  refreshAccountQuotas,
   refreshAccounts,
+  refreshingAccountQuotas,
   setAccountsDisabled,
   setActiveConfig,
 } = useAccountManagementData();
