@@ -2,6 +2,7 @@ import axios from "axios";
 
 const MANAGEMENT_CONFIG_PATH = "/v0/management/config";
 const MANAGEMENT_AUTH_FILES_PATH = "/v0/management/auth-files";
+const MANAGEMENT_AUTH_FILE_DOWNLOAD_PATH = "/v0/management/auth-files/download";
 const MANAGEMENT_AUTH_FILES_STATUS_PATH = "/v0/management/auth-files/status";
 const MANAGEMENT_API_CALL_PATH = "/v0/management/api-call";
 const MANAGEMENT_USAGE_PATH = "/v0/management/usage";
@@ -67,11 +68,26 @@ const createCpaManagementRequestConfig = (
     method: options.method || "GET",
     headers,
     timeout: Math.max(Number(config.timeoutSeconds) || 30, 1) * 1000,
-    withCredentials: false,
+    withCredentials: options.withCredentials ?? false,
     ...(Object.prototype.hasOwnProperty.call(options, "data")
       ? { data: options.data }
       : {}),
   };
+};
+
+const createCpaManagementAuthFileDownloadRequestConfig = (config, name) => {
+  const fileName = String(name || "").trim();
+
+  if (!fileName) {
+    throw new Error("账号缺少文件名，无法下载认证文件");
+  }
+
+  const query = new URLSearchParams({ name: fileName }).toString();
+
+  return createCpaManagementRequestConfig(
+    config,
+    `${MANAGEMENT_AUTH_FILE_DOWNLOAD_PATH}?${query}`,
+  );
 };
 
 const testCpaManagementConfig = (config) =>
@@ -79,6 +95,9 @@ const testCpaManagementConfig = (config) =>
 
 const fetchCpaManagementAuthFiles = (config) =>
   axios(createCpaManagementRequestConfig(config, MANAGEMENT_AUTH_FILES_PATH));
+
+const fetchCpaManagementAuthFileDownload = (config, name) =>
+  axios(createCpaManagementAuthFileDownloadRequestConfig(config, name));
 
 const fetchCpaManagementUsage = (config) =>
   axios(createCpaManagementRequestConfig(config, MANAGEMENT_USAGE_PATH));
@@ -131,7 +150,9 @@ const deleteCpaManagementAuthFiles = (config, payload) =>
 export {
   deleteCpaManagementAuthFiles,
   buildAuthHeaders,
+  createCpaManagementAuthFileDownloadRequestConfig,
   createCpaManagementRequestConfig,
+  fetchCpaManagementAuthFileDownload,
   fetchCpaManagementAuthFiles,
   fetchCpaManagementUsage,
   patchCpaManagementAuthFileStatus,

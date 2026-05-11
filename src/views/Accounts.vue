@@ -76,6 +76,7 @@
         v-else
         :items="accountItems"
         :busy="mutatingAccounts"
+        :local-quota-refreshing="refreshingLocalAccountQuotas"
         :quota-refreshing="refreshingAccountQuotas"
         :refreshing="loadingAccounts"
         :selection-version="selectionVersion"
@@ -85,6 +86,7 @@
         @enable-stale-disabled-items="handleEnableStaleDisabledItems"
         @remove-items="handleRemoveAccounts"
         @refresh="refreshAccounts({ showToast: true })"
+        @refresh-local-quotas="refreshLocalAccountQuotas"
         @refresh-quotas="refreshAccountQuotas"
       />
 
@@ -132,8 +134,10 @@ const {
   mutatingAccounts,
   removeAccounts,
   refreshAccountQuotas,
+  refreshLocalAccountQuotas,
   refreshAccounts,
   refreshingAccountQuotas,
+  refreshingLocalAccountQuotas,
   setAccountsDisabled,
   setActiveConfig,
 } = useAccountManagementData();

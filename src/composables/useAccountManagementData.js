@@ -1,7 +1,12 @@
 import { computed, ref, watch } from "vue";
 import { ElMessage } from "element-plus";
 import {
+  fetchLocalChatGptUsage,
+  resolveLocalUsageCredentials,
+} from "@/api/chatgptUsage";
+import {
   deleteCpaManagementAuthFiles,
+  fetchCpaManagementAuthFileDownload,
   fetchCpaManagementAuthFiles,
   patchCpaManagementAuthFileStatus,
   postCpaManagementApiCall,
@@ -70,6 +75,7 @@ export const useAccountManagementData = () => {
   const accountEntries = ref({});
   const mutatingAccounts = ref(false);
   const refreshingAccountQuotas = ref(false);
+  const refreshingLocalAccountQuotas = ref(false);
 
   const syncAccountEntries = (configs = []) => {
     const nextEntries = {};
@@ -249,8 +255,107 @@ export const useAccountManagementData = () => {
     entry.loaded = true;
   };
 
+  const resolveQuotaRefreshTargetItems = (sourceItems, targetEntry) => {
+    const orderedSourceItems = Array.isArray(sourceItems) ? sourceItems : [];
+    const orderedItems = orderedSourceItems.length
+      ? orderedSourceItems
+        .map((sourceItem) => targetEntry.items.find((item) => item.id === sourceItem?.id))
+        .filter(Boolean)
+      : [];
+    const targetItems = orderedItems
+      .filter((item) => !isAccountQuotaRefreshed(item))
+      .slice(0, ACCOUNT_QUOTA_BATCH_LIMIT);
+
+    return {
+      orderedItems,
+      targetItems,
+    };
+  };
+
+  const showQuotaBatchLimitWarning = (orderedItems, targetItems) => {
+    if (orderedItems.length > ACCOUNT_QUOTA_BATCH_LIMIT && targetItems.length) {
+      ElMessage.warning(
+        `当前最多支持刷新 ${ACCOUNT_QUOTA_BATCH_LIMIT} 个账号，已按当前页顺序选择前 ${ACCOUNT_QUOTA_BATCH_LIMIT} 个未刷新账号`,
+      );
+    }
+  };
+
+  const setQuotaItemsLoading = (configId, targetItems) => {
+    const targetIds = new Set(targetItems.map((item) => item.id));
+
+    updateAccountItems(configId, (items) =>
+      items.map((item) => (
+        targetIds.has(item.id)
+          ? {
+            ...item,
+            quota: createLoadingAccountQuotaState(),
+          }
+          : item
+      )),
+    );
+  };
+
+  const applyQuotaRefreshResults = (configId, targetItems, results) => {
+    const quotaStateById = new Map();
+    let successCount = 0;
+
+    results.forEach((result, index) => {
+      const targetItem = targetItems[index];
+
+      if (result.status === "fulfilled") {
+        quotaStateById.set(
+          targetItem.id,
+          normalizeAccountQuotaPayload(result.value.data),
+        );
+        successCount += 1;
+        return;
+      }
+
+      quotaStateById.set(
+        targetItem.id,
+        createAccountQuotaErrorState(resolveDashboardErrorMessage(result.reason)),
+      );
+    });
+
+    updateAccountItems(configId, (items) =>
+      items.map((item) => (
+        quotaStateById.has(item.id)
+          ? {
+            ...item,
+            quota: quotaStateById.get(item.id),
+          }
+          : item
+      )),
+    );
+
+    return successCount;
+  };
+
+  const showQuotaRefreshResult = (successCount, targetCount, sourceLabel = "") => {
+    const labelPrefix = sourceLabel ? `${sourceLabel}已刷新` : "已刷新";
+
+    if (successCount === targetCount) {
+      ElMessage.success(`${labelPrefix} ${successCount} 个账号额度`);
+      return true;
+    }
+
+    if (successCount > 0) {
+      ElMessage.warning(
+        `${labelPrefix} ${successCount} 个账号额度，${targetCount - successCount} 个读取失败`,
+      );
+      return true;
+    }
+
+    ElMessage.error(`${sourceLabel || "账号"}额度刷新失败`);
+    return false;
+  };
+
   const refreshAccountQuotas = async (sourceItems = []) => {
-    if (refreshingAccountQuotas.value || mutatingAccounts.value) {
+    if (
+      refreshingAccountQuotas.value
+      || refreshingLocalAccountQuotas.value
+      || mutatingAccounts.value
+    ) {
       return false;
     }
 
@@ -263,39 +368,16 @@ export const useAccountManagementData = () => {
       return false;
     }
 
-    const orderedSourceItems = Array.isArray(sourceItems) ? sourceItems : [];
-    const orderedItems = orderedSourceItems.length
-      ? orderedSourceItems
-        .map((sourceItem) => targetEntry.items.find((item) => item.id === sourceItem?.id))
-        .filter(Boolean)
-      : [];
-    const targetItems = orderedItems
-      .filter((item) => !isAccountQuotaRefreshed(item))
-      .slice(0, ACCOUNT_QUOTA_BATCH_LIMIT);
+    const { orderedItems, targetItems } = resolveQuotaRefreshTargetItems(sourceItems, targetEntry);
 
-    if (orderedItems.length > ACCOUNT_QUOTA_BATCH_LIMIT && targetItems.length) {
-      ElMessage.warning(
-        `当前最多支持刷新 ${ACCOUNT_QUOTA_BATCH_LIMIT} 个账号，已按当前页顺序选择前 ${ACCOUNT_QUOTA_BATCH_LIMIT} 个未刷新账号`,
-      );
-    }
+    showQuotaBatchLimitWarning(orderedItems, targetItems);
 
     if (!targetItems.length) {
       ElMessage.info("当前页账号额度均已刷新");
       return false;
     }
 
-    const targetIds = new Set(targetItems.map((item) => item.id));
-
-    updateAccountItems(targetConfigId, (items) =>
-      items.map((item) => (
-        targetIds.has(item.id)
-          ? {
-            ...item,
-            quota: createLoadingAccountQuotaState(),
-          }
-          : item
-      )),
-    );
+    setQuotaItemsLoading(targetConfigId, targetItems);
 
     refreshingAccountQuotas.value = true;
 
@@ -312,54 +394,62 @@ export const useAccountManagementData = () => {
           );
         }),
       );
-      const quotaStateById = new Map();
-      let successCount = 0;
 
-      results.forEach((result, index) => {
-        const targetItem = targetItems[index];
+      const successCount = applyQuotaRefreshResults(targetConfigId, targetItems, results);
 
-        if (result.status === "fulfilled") {
-          quotaStateById.set(
-            targetItem.id,
-            normalizeAccountQuotaPayload(result.value.data),
-          );
-          successCount += 1;
-          return;
-        }
-
-        quotaStateById.set(
-          targetItem.id,
-          createAccountQuotaErrorState(resolveDashboardErrorMessage(result.reason)),
-        );
-      });
-
-      updateAccountItems(targetConfigId, (items) =>
-        items.map((item) => (
-          quotaStateById.has(item.id)
-            ? {
-              ...item,
-              quota: quotaStateById.get(item.id),
-            }
-            : item
-        )),
-      );
-
-      if (successCount === targetItems.length) {
-        ElMessage.success(`已刷新 ${successCount} 个账号额度`);
-        return true;
-      }
-
-      if (successCount > 0) {
-        ElMessage.warning(
-          `已刷新 ${successCount} 个账号额度，${targetItems.length - successCount} 个读取失败`,
-        );
-        return true;
-      }
-
-      ElMessage.error("账号额度刷新失败");
-      return false;
+      return showQuotaRefreshResult(successCount, targetItems.length);
     } finally {
       refreshingAccountQuotas.value = false;
+    }
+  };
+
+  const refreshLocalAccountQuotas = async (sourceItems = []) => {
+    if (
+      refreshingAccountQuotas.value
+      || refreshingLocalAccountQuotas.value
+      || mutatingAccounts.value
+    ) {
+      return false;
+    }
+
+    const targetConfig = activeConfig.value;
+    const targetConfigId = activeConfigId.value;
+    const targetEntry = getAccountEntry(targetConfigId);
+
+    if (!isConfigReady(targetConfig)) {
+      ElMessage.warning("当前接入未完成配置，暂时无法本地刷新账号额度");
+      return false;
+    }
+
+    const { orderedItems, targetItems } = resolveQuotaRefreshTargetItems(sourceItems, targetEntry);
+
+    showQuotaBatchLimitWarning(orderedItems, targetItems);
+
+    if (!targetItems.length) {
+      ElMessage.info("当前页账号额度均已刷新");
+      return false;
+    }
+
+    setQuotaItemsLoading(targetConfigId, targetItems);
+    refreshingLocalAccountQuotas.value = true;
+
+    try {
+      const results = await Promise.allSettled(
+        targetItems.map(async (item) => {
+          const authFileResponse = await fetchCpaManagementAuthFileDownload(
+            targetConfig,
+            item.fileName,
+          );
+          const credentials = resolveLocalUsageCredentials(item, authFileResponse.data);
+
+          return fetchLocalChatGptUsage(credentials);
+        }),
+      );
+      const successCount = applyQuotaRefreshResults(targetConfigId, targetItems, results);
+
+      return showQuotaRefreshResult(successCount, targetItems.length, "本地");
+    } finally {
+      refreshingLocalAccountQuotas.value = false;
     }
   };
 
@@ -595,8 +685,10 @@ export const useAccountManagementData = () => {
     mutatingAccounts,
     removeAccounts,
     refreshAccountQuotas,
+    refreshLocalAccountQuotas,
     refreshAccounts,
     refreshingAccountQuotas,
+    refreshingLocalAccountQuotas,
     setAccountsDisabled,
     setActiveConfig,
   };

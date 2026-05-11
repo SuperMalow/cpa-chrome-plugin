@@ -457,6 +457,12 @@ const formatDisplayLabel = (value, fallback = "--") => {
     .join(" ");
 };
 
+const firstPresentString = (...values) => {
+  const value = values.find((item) => String(item || "").trim());
+
+  return value ? String(value).trim() : "";
+};
+
 const normalizeAuthAccountItem = (item, index) => {
   const account =
     item?.account
@@ -472,7 +478,22 @@ const normalizeAuthAccountItem = (item, index) => {
     account,
     accountType: item?.account_type || item?.type || "--",
     accountTypeLabel: formatDisplayLabel(item?.account_type || item?.type, "--"),
+    accessToken: firstPresentString(
+      item?.accessToken,
+      item?.access_token,
+      item?.token,
+      item?.auth?.access_token,
+      item?.credentials?.access_token,
+    ),
     authIndex: item?.authIndex || item?.auth_index || "",
+    chatgptAccountId: firstPresentString(
+      item?.chatgptAccountId,
+      item?.chatgpt_account_id,
+      item?.accountId,
+      item?.account_id,
+      item?.organizationId,
+      item?.organization_id,
+    ),
     createdAtRaw,
     createdAtText: formatAccountDateTime(createdAtRaw),
     disabled: Boolean(item?.disabled),

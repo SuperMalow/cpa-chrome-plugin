@@ -170,10 +170,18 @@
       <div class="flex flex-wrap items-center gap-2 xl:justify-end">
         <button
           class="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-3 text-xs font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-sky-800/70 dark:bg-sky-500/16 dark:text-sky-300 dark:hover:border-sky-700 dark:hover:bg-sky-500/22"
-          type="button" :disabled="busy || refreshing || quotaRefreshing || !pagedItems.length"
+          type="button" :disabled="busy || refreshing || quotaRefreshing || localQuotaRefreshing || !pagedItems.length"
           @click="handleRefreshQuotas">
           <RefreshRight :class="['h-3.5 w-3.5', quotaRefreshing ? 'animate-spin' : '']" />
-          <span class="whitespace-nowrap">{{ quotaRefreshing ? "额度刷新中" : "刷新额度" }}</span>
+          <span class="whitespace-nowrap">{{ quotaRefreshing ? "远端本页刷新中" : "远端本页刷新" }}</span>
+        </button>
+
+        <button
+          class="inline-flex h-7 cursor-pointer items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100/80 disabled:cursor-not-allowed disabled:opacity-60 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/70"
+          type="button" :disabled="busy || refreshing || quotaRefreshing || localQuotaRefreshing || !pagedItems.length"
+          @click="handleRefreshLocalQuotas">
+          <RefreshRight :class="['h-3.5 w-3.5', localQuotaRefreshing ? 'animate-spin' : '']" />
+          <span class="whitespace-nowrap">{{ localQuotaRefreshing ? "本地本页刷新中" : "本地本页刷新" }}</span>
         </button>
 
         <button
@@ -215,9 +223,10 @@
 
         <tbody v-if="pagedItems.length">
           <AccountTableRow v-for="item in pagedItems" :key="item.id" :item="item" :selected="selectedIdSet.has(item.id)"
-            :busy="busy" :quota-refreshing="quotaRefreshing" @toggle="toggleItemSelection"
+            :busy="busy" :quota-refreshing="quotaRefreshing" :local-quota-refreshing="localQuotaRefreshing" @toggle="toggleItemSelection"
             @disable="emit('disable-items', [$event])" @enable="emit('enable-items', [$event])"
-            @remove="emit('remove-items', [$event])" @refresh-quota="emit('refresh-quotas', [$event])" />
+            @remove="emit('remove-items', [$event])" @refresh-quota="emit('refresh-quotas', [$event])"
+            @refresh-local-quota="emit('refresh-local-quotas', [$event])" />
         </tbody>
 
         <tbody v-else>
@@ -243,6 +252,7 @@ const emit = defineEmits([
   "remove-items",
   "refresh",
   "refresh-quotas",
+  "refresh-local-quotas",
   "disable-usage-limit-items",
   "enable-stale-disabled-items",
 ]);
@@ -261,6 +271,10 @@ const props = defineProps({
     default: false,
   },
   quotaRefreshing: {
+    type: Boolean,
+    default: false,
+  },
+  localQuotaRefreshing: {
     type: Boolean,
     default: false,
   },
@@ -570,10 +584,30 @@ const handleRefresh = () => {
 };
 
 const handleRefreshQuotas = () => {
-  if (props.busy || props.refreshing || props.quotaRefreshing || !pagedItems.value.length) {
+  if (
+    props.busy
+    || props.refreshing
+    || props.quotaRefreshing
+    || props.localQuotaRefreshing
+    || !pagedItems.value.length
+  ) {
     return;
   }
 
   emit("refresh-quotas", [...pagedItems.value]);
+};
+
+const handleRefreshLocalQuotas = () => {
+  if (
+    props.busy
+    || props.refreshing
+    || props.quotaRefreshing
+    || props.localQuotaRefreshing
+    || !pagedItems.value.length
+  ) {
+    return;
+  }
+
+  emit("refresh-local-quotas", [...pagedItems.value]);
 };
 </script>

@@ -40,7 +40,7 @@
     </td>
 
     <td class="px-4 py-4 align-top">
-      <div class="min-w-[150px]">
+      <div class="min-w-[190px]">
         <template v-if="quotaVisible">
           <div class="max-w-[190px] space-y-2">
             <div
@@ -74,15 +74,27 @@
             </div>
           </div>
         </template>
-        <button
-          v-else
-          class="cursor-pointer bg-transparent p-0 text-[12px] font-semibold text-slate-400 underline underline-offset-4 transition hover:text-slate-600 disabled:cursor-not-allowed disabled:opacity-50 dark:text-slate-500 dark:hover:text-slate-300"
-          type="button"
-          :disabled="busy || quotaRefreshing"
-          @click="$emit('refresh-quota', item)"
-        >
-          刷新
-        </button>
+        <div :class="['flex flex-wrap items-center gap-1.5', quotaVisible ? 'mt-2.5' : '']">
+          <button
+            class="inline-flex h-6 cursor-pointer items-center gap-1 rounded-full border border-blue-200 bg-blue-50/80 px-2.5 text-[11px] font-semibold text-blue-600 transition hover:border-blue-300 hover:bg-blue-100/80 disabled:cursor-not-allowed disabled:opacity-55 dark:border-sky-800/70 dark:bg-sky-500/14 dark:text-sky-300 dark:hover:border-sky-700 dark:hover:bg-sky-500/22"
+            type="button"
+            :disabled="quotaActionDisabled"
+            @click="$emit('refresh-quota', item)"
+          >
+            <RefreshRight :class="['h-3 w-3', quotaRefreshing ? 'animate-spin' : '']" />
+            <span class="whitespace-nowrap">远端</span>
+          </button>
+
+          <button
+            class="inline-flex h-6 cursor-pointer items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50/80 px-2.5 text-[11px] font-semibold text-emerald-700 transition hover:border-emerald-300 hover:bg-emerald-100/80 disabled:cursor-not-allowed disabled:opacity-55 dark:border-emerald-900/70 dark:bg-emerald-950/50 dark:text-emerald-300 dark:hover:border-emerald-800 dark:hover:bg-emerald-950/70"
+            type="button"
+            :disabled="quotaActionDisabled"
+            @click="$emit('refresh-local-quota', item)"
+          >
+            <RefreshRight :class="['h-3 w-3', localQuotaRefreshing ? 'animate-spin' : '']" />
+            <span class="whitespace-nowrap">本地</span>
+          </button>
+        </div>
       </div>
     </td>
 
@@ -152,7 +164,7 @@
 import { computed } from "vue";
 import { RefreshRight } from "@element-plus/icons-vue";
 
-defineEmits(["toggle", "disable", "enable", "remove", "refresh-quota"]);
+defineEmits(["toggle", "disable", "enable", "remove", "refresh-quota", "refresh-local-quota"]);
 
 const props = defineProps({
   item: {
@@ -168,6 +180,10 @@ const props = defineProps({
     default: false,
   },
   quotaRefreshing: {
+    type: Boolean,
+    default: false,
+  },
+  localQuotaRefreshing: {
     type: Boolean,
     default: false,
   },
@@ -222,6 +238,9 @@ const quotaState = computed(() => props.item.quota || {
 });
 const quotaVisible = computed(() =>
   Boolean(quotaState.value.visible || quotaState.value.status === "loading"),
+);
+const quotaActionDisabled = computed(() =>
+  props.busy || props.quotaRefreshing || props.localQuotaRefreshing,
 );
 const quotaClass = computed(
   () => quotaClassMap[quotaState.value.tone] || quotaClassMap.neutral,
